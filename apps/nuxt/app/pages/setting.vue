@@ -49,7 +49,6 @@ import SettingItem from '@typewords/core/components/setting/SettingItem.vue'
 import { Supabase } from '@typewords/core/utils/supabase.ts'
 import BackupGateDialog from '@typewords/core/components/dialog/BackupGateDialog.vue'
 
-
 import { createClient } from '@supabase/supabase-js'
 import { useRoute } from 'vue-router'
 import type { BackupData, Snapshot } from '@typewords/core'
@@ -443,6 +442,9 @@ function transferOk() {
 async function clearAllData() {
   await dataSyncPersistence.clear()
   Supabase.removeConfig()
+  sbForm.url = ''
+  sbForm.key = ''
+  sbStatus = { status: 'idle', statusMessage: undefined }
   Toast.success('清除成功')
 }
 
@@ -524,6 +526,7 @@ async function doSaveSbConfig() {
       } else {
         Supabase.setStatus('success')
         sbStatus = Supabase.getStatus()
+        await onSbFirstSyncChoice('push_local')
         Toast.success('保存成功')
         Supabase.saveConfig(sbForm?.url, sbForm?.key)
         transferOk()
@@ -677,7 +680,9 @@ function removeSbConfig() {
             <!--          Supabase 设置  -->
             <SettingItem title="Supabase 配置" desc="网站不会上传您的 url 和 key，只保存在浏览器本地(Local storage)">
               <div v-if="sbStatus.status !== 'idle'" class="mt-2 text-sm">
-                <span v-if="sbStatus.status === 'success'"  class="text-green">状态：同步正常运行中，数据已同步到云端</span>
+                <span v-if="sbStatus.status === 'success'" class="text-green"
+                  >状态：同步正常运行中，数据已同步到云端</span
+                >
                 <span v-else-if="sbStatus.status === 'error'" class="text-red">
                   同步状态：失败{{ sbStatus.statusMessage ? `（${sbStatus.statusMessage}）` : '' }}
                 </span>
@@ -767,7 +772,7 @@ function removeSbConfig() {
 
           <div v-if="tabIndex === 9" class="center flex-col">
             <About />
-            <div class="text-md color-gray mt-10">Build {{ gitLastCommitHash }} {{gitLastCommitTime}}</div>
+            <div class="text-md color-gray mt-10">Build {{ gitLastCommitHash }} {{ gitLastCommitTime }}</div>
           </div>
         </div>
       </div>
@@ -808,9 +813,9 @@ function removeSbConfig() {
       <div v-if="!historyBackups.length" class="color-gray">暂无历史数据</div>
       <div v-else class="flex flex-col gap-3">
         <div>这里是每次 {{ APP_NAME }} 更新后/报错后自动保存的用户数据，如果您的数据被损坏，您可在此尝试恢复</div>
-        <div v-for="(item,i) in historyBackups" :key="item.key" class="border rounded-md flex justify-between">
+        <div v-for="(item, i) in historyBackups" :key="item.key" class="border rounded-md flex justify-between">
           <div>
-            <div class="">{{ i+1 }}. 版本号：{{ item.hash }}</div>
+            <div class="">{{ i + 1 }}. 版本号：{{ item.hash }}</div>
             <div class="color-gray">自动备份时间：{{ formatHistoryTime(item.createdAt) }}</div>
           </div>
           <div class="mt-2">
