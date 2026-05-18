@@ -259,7 +259,7 @@ export function useStartKeyboardEventListener() {
 
   useEventListener('keydown', (e: KeyboardEvent) => {
     //解决无法复制、全选的问题
-    if ((e.ctrlKey || e.metaKey) && ['KeyC', 'KeyA'].includes(e.code)) return
+    if ((e.ctrlKey || e.metaKey) && ['KeyC', 'KeyA', 'KeyD'].includes(e.code)) return
     if (window?.disableEventListener) return
     if (!runtimeStore.disableEventListener) {
       // 检查当前单词是否包含空格，如果包含，则空格键应该被视为输入

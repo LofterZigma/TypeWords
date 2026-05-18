@@ -6,7 +6,7 @@ import { isMobile } from '../../utils'
 
 let showNotice = $ref(false)
 let show = $ref(false)
-let num = $ref(5)
+let num = $ref(3)
 let timer = -1
 let mobile = $ref(isMobile())
 
@@ -45,13 +45,13 @@ watch(
     <div class="CollectNotice card" :class="{ mobile }" v-if="show">
       <div class="notice">
         坚持练习，提高外语能力。将
-        <span class="active">「{{ APP_NAME }}」</span>
+        <span class="active font-bold">「{{ APP_NAME }}」</span>
         保存为书签，永不迷失！
       </div>
       <div class="collect">
         <div class="href-wrapper">
           <div class="round">
-            <div class="href">{{ Host }}</div>
+            <div class="text-base">{{ Host }}</div>
             <IconMdiStarOutline />
           </div>
           <div class="right">
@@ -60,6 +60,9 @@ watch(
             点亮它!
           </div>
         </div>
+      </div>
+      <div class="text-base">
+        Ctrl/Command + D 快速收藏
       </div>
       <BaseButton size="large" @click="toggleNotice" v-if="!showNotice">我已收藏</BaseButton>
       <div class="close-wrapper">
@@ -130,10 +133,6 @@ watch(
         align-items: center;
         justify-content: space-between;
         background: var(--color-primary);
-
-        .href {
-          font-size: 0.9rem;
-        }
       }
 
       .star {

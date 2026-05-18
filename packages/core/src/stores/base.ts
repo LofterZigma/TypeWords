@@ -229,13 +229,16 @@ export const useBaseStore = defineStore('base', {
           v.words = shallowReactive([])
         }
       })
-      let rIndex = this.word.bookList.findIndex((v: Dict) => v.id === val.id)
+      let rIndex = this.word.bookList.findIndex((v: Dict) => [val.enName, val.id].includes(v.id))
       if (val.words.length < val.perDayStudyNumber) {
         val.perDayStudyNumber = val.words.length
       }
       if (rIndex > -1) {
         this.word.studyIndex = rIndex
         this.word.bookList[this.word.studyIndex].words = shallowReactive(val.words)
+        this.word.bookList[this.word.studyIndex].id = val.id
+        this.word.bookList[this.word.studyIndex].enName = val.enName
+        this.word.bookList[this.word.studyIndex].length = val.length
         this.word.bookList[this.word.studyIndex].perDayStudyNumber = val.perDayStudyNumber
         this.word.bookList[this.word.studyIndex].lastLearnIndex = val.lastLearnIndex
         this.word.bookList[this.word.studyIndex].userDictId = val.userDictId
@@ -264,12 +267,15 @@ export const useBaseStore = defineStore('base', {
           v.articles = shallowReactive([])
         }
       })
-      let rIndex = this.article.bookList.findIndex((v: Dict) => v.id === val.id)
+      let rIndex = this.article.bookList.findIndex((v: Dict) => [val.enName, val.id].includes(v.id))
       if (rIndex > -1) {
         this.article.studyIndex = rIndex
         //不要整个等于，不然统计没了
         // this.article.bookList[this.article.studyIndex] = getDefaultDict(val)
         this.article.bookList[this.article.studyIndex].articles = shallowReactive(val.articles)
+        this.article.bookList[this.article.studyIndex].id = val.id
+        this.article.bookList[this.article.studyIndex].enName = val.enName
+        this.article.bookList[this.article.studyIndex].length = val.length
         this.article.bookList[this.article.studyIndex].cover = val.cover
         this.article.bookList[this.article.studyIndex].name = val.name
         this.article.bookList[this.article.studyIndex].description = val.description

@@ -1048,18 +1048,12 @@ const isCollect = $computed(() => isWordCollect(props.word))
   .en {
     @apply text-lg;
   }
-
-  .pos {
-    @apply text-lg w-12;
-  }
 }
 
 // 移动端适配
 @media (max-width: 768px) {
   .typing-word {
-
-    .label,
-    .pos {
+    .label {
       @apply w-unset mr-2;
     }
     :deep(.pos) {

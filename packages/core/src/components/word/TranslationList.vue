@@ -62,16 +62,16 @@ onMounted(() => {
   <div>
     <div class="flex gap-3 flex-wrap items-end">
       <span v-for="tran in noposTrans">
-          <span v-if="tran.frequency != undefined" :class="['rare', 'uncommon', 'common'][tran.frequency]">
-            {{ tran.cn }}
-          </span>
-          <SentenceHightLightWord
-            v-else
-            :text="tran.cn"
-            :word="word.word"
-            :dictation="!props.showFull"
-            :high-light="false"
-          />
+        <span v-if="tran.frequency != undefined" :class="['rare', 'uncommon', 'common'][tran.frequency]">
+          {{ tran.cn }}
+        </span>
+        <SentenceHightLightWord
+          v-else
+          :text="tran.cn"
+          :word="word.word"
+          :dictation="!props.showFull"
+          :high-light="false"
+        />
       </span>
     </div>
     <div class="flex" v-for="pos in posList">
@@ -107,5 +107,9 @@ onMounted(() => {
 .common {
   opacity: 1;
   font-weight: 500;
+}
+
+.pos {
+  color: var(--color-select-bg);
 }
 </style>

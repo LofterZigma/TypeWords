@@ -15,7 +15,7 @@ import {
 } from '@typewords/base'
 import BaseTable from '@typewords/core/components/BaseTable.vue'
 import WordItem from '@typewords/core/components/word/WordItem.vue'
-import { AppEnv, DictId, LIB_JS_URL, TourConfig } from '@typewords/core/config/env.ts'
+import { AppEnv, DICT_LIST, DictId, LIB_JS_URL, TourConfig } from '@typewords/core/config/env.ts'
 import { getCurrentStudyWord } from '@typewords/core/hooks/dict.ts'
 import EditBook from '@typewords/core/components/article/EditBook.vue'
 import PracticeSettingDialog from '@typewords/core/components/word/PracticeSettingDialog.vue'
@@ -29,6 +29,7 @@ import {
   convertToWord,
   isMobile,
   loadJsLib,
+  resourceWrap,
   reverse,
   shuffle,
   useNav,
@@ -248,12 +249,27 @@ onMounted(async () => {
         !runtimeStore.editDict.words.length &&
         !runtimeStore.editDict.custom &&
         ![DictId.wordCollect, DictId.wordWrong, DictId.wordKnown].includes(
-          runtimeStore.editDict.en_name || runtimeStore.editDict.id
+          runtimeStore.editDict.enName || runtimeStore.editDict.id
         )
       ) {
         loading = true
-        let r = await _getDictDataByUrl(runtimeStore.editDict)
-        runtimeStore.editDict = r
+        let dictList = await fetch(resourceWrap(DICT_LIST.WORD.ALL)).then(r => r.json())
+        let dict = await _getDictDataByUrl(runtimeStore.editDict)
+        let r = dictList.find(v => [v.enName, v.id].includes(runtimeStore.editDict.id))
+        if (r) {
+          runtimeStore.editDict.words = dict.words
+          runtimeStore.editDict.id = r.id
+          runtimeStore.editDict.enName = r.enName
+          runtimeStore.editDict.cover = r.cover
+          runtimeStore.editDict.category = r.category
+          runtimeStore.editDict.tags = r.tags
+          runtimeStore.editDict.url = r.url
+          runtimeStore.editDict.description = r.description
+          runtimeStore.editDict.name = r.name
+        } else {
+          runtimeStore.editDict = dict
+        }
+        runtimeStore.editDict.length = dict.words.length
       }
       if (base.word.bookList.find(book => book.id === runtimeStore.editDict.id)) {
         if (AppEnv.CAN_REQUEST) {
@@ -617,7 +633,7 @@ function getLocalList({ pageNo, pageSize, searchKey }) {
 }
 
 async function requestList({ pageNo, pageSize, searchKey }) {
-  if (!dict.custom && ![DictId.wordCollect, DictId.wordWrong, DictId.wordKnown].includes(dict.en_name || dict.id)) {
+  if (!dict.custom && ![DictId.wordCollect, DictId.wordWrong, DictId.wordKnown].includes(dict.enName || dict.id)) {
     // 非自定义词典，直接请求json
 
     //如果没数据则请求

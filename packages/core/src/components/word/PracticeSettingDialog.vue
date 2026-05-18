@@ -42,6 +42,7 @@ watch(
       if (runtimeStore.editDict.id) {
         tempPerDayStudyNumber = runtimeStore.editDict.perDayStudyNumber
         tempLastLearnIndex = runtimeStore.editDict.lastLearnIndex
+        if (tempLastLearnIndex >= runtimeStore.editDict.length) tempLastLearnIndex = runtimeStore.editDict.length
         tempWordReviewRatio = settings.wordReviewRatio
       } else {
         Toast.warning($t('please_select_dict'))
