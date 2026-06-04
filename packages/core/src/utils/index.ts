@@ -456,7 +456,6 @@ export function convertToWord(raw: any) {
     word: safeString(raw.word),
     phonetic0: safeString(raw.phonetic0),
     phonetic1: safeString(raw.phonetic1),
-    note: safeString(raw.note),
     trans,
     sentences,
     phrases,

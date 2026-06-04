@@ -8,8 +8,11 @@
       :rows="rows"
       :disabled="disabled"
       :style="textareaStyle"
+      v-focus="autofocus"
       class="w-full px-3 py-2 border border-gray-300 rounded-md outline-none resize-none transition-colors duration-200 box-border"
       @input="handleInput"
+      @focus="onFocus"
+      @blur="onBlur"
     />
     <!-- 字数统计 -->
     <span
@@ -32,9 +35,10 @@ const props = defineProps<{
   autosize: boolean | { minRows?: number; maxRows?: number }
   showWordLimit?: boolean
   disabled?: boolean
+  autofocus?: boolean
 }>()
 
-const emit = defineEmits(['update:modelValue'])
+const emit = defineEmits(['update:modelValue', 'focus', 'blur'])
 
 const innerValue = ref(props.modelValue ?? '')
 watch(
@@ -43,6 +47,22 @@ watch(
 )
 
 const textareaRef = ref<HTMLTextAreaElement>()
+
+// 聚焦时禁用练习键盘事件监听，参照 BaseInput.vue 的处理方式
+const focus = ref(false)
+watch(focus, (n: boolean) => {
+  ;(window as any).disableEventListener = n
+})
+
+const onFocus = (e: FocusEvent) => {
+  focus.value = true
+  emit('focus', e)
+}
+
+const onBlur = (e: FocusEvent) => {
+  focus.value = false
+  emit('blur', e)
+}
 
 // 样式（用于控制高度）
 const textareaStyle = computed(() => {
@@ -89,6 +109,16 @@ watch(
   },
   { immediate: true }
 )
+
+
+const vFocus = {
+  mounted: (el, bind) => {
+    if (bind.value) {
+      el.focus()
+      setTimeout(() => (focus.value = true))
+    }
+  },
+}
 </script>
 <style scoped lang="scss">
 .disabled {

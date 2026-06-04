@@ -21,6 +21,7 @@ export interface BaseState {
   }
   dictListVersion: number
   fsrsData: Record<string, Card>
+  noteData: Record<string, string> // 集中存储单词笔记，key 为单词字符串
   _ignoreWatch: boolean //忽略监听，避免重复保存和上传
 }
 
@@ -89,6 +90,7 @@ export const getDefaultBaseState = (): BaseState => ({
   },
   dictListVersion: 1,
   fsrsData: {},
+  noteData: {},
   _ignoreWatch: false,
 })
 

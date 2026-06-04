@@ -97,6 +97,14 @@ async function onSubmitWord() {
   await wordFormRef.validate(valid => {
     if (valid) {
       let data: any = convertToWord(wordForm)
+      // 笔记集中存储，不保存在 Word 对象内
+      const noteVal = wordForm.note?.trim()
+      const wordKey = wordForm.word
+      if (noteVal) {
+        base.noteData[wordKey] = noteVal
+      } else {
+        delete base.noteData[wordKey]
+      }
       //todo 可以检查的更准确些，比如json对比
       if (data.id) {
         let r = allList.find(v => v.id === data.id)
@@ -181,7 +189,7 @@ function word2Str(word) {
   res.word = word.word
   res.phonetic1 = word.phonetic1
   res.phonetic0 = word.phonetic0
-  res.note = word.note ?? ''
+  res.note = base.noteData[word.word] ?? ''
   res.trans = word.trans.map(v => (v.pos + v.cn).replaceAll('"', '')).join('\n')
   res.sentences = word.sentences.map(v => (v.c + '\n' + v.cn).replaceAll('"', '')).join('\n\n')
   res.phrases = word.phrases.map(v => (v.c + '\n' + v.cn).replaceAll('"', '')).join('\n\n')
@@ -343,7 +351,6 @@ function importData(e) {
                 word: v['单词'],
                 phonetic0: v['音标①'] ?? '',
                 phonetic1: v['音标②'] ?? '',
-                note: v['笔记'] ?? '',
                 trans: v['翻译'] ?? '',
                 sentences: v['例句'] ?? '',
                 phrases: v['短语'] ?? '',
@@ -351,6 +358,11 @@ function importData(e) {
                 relWords: v['同根词'] ?? '',
                 etymology: v['词源'] ?? '',
               })
+              // 笔记集中存储
+              const noteVal = (v['笔记'] ?? '').trim()
+              if (noteVal) {
+                base.noteData[v['单词']] = noteVal
+              }
             } catch (e) {
               console.error('导入单词报错' + v['单词'], e.message)
             }
