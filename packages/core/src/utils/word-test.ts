@@ -2,6 +2,14 @@ import { get } from "idb-keyval";
 import { Candidate, Question, Word } from "../types";
 import { shuffle } from "../utils";
 
+const CHARS_CONTAIN_SCORE = 1 << 2;
+const CHARS_NOT_CONTAIN_SCORE = -1;
+const TRAN_EQUALS_BASE_SCORE = 1 << 16;
+const TRANS_CHARS_COMMON_FACTOR = 1;
+const WORD_COMMON_FACTOR = 1 << 16;
+const WORD_CONTAIN_SCORE = 1 << 20;
+const FUZZ_SCORE_BASE = 1 << 16;
+
 function getTrans(word: Word): { cn: string, freq: number }[] {
     let rsMap = new Map<string, { cn: string, freq: number }>();
     word.trans.forEach(item => {
@@ -24,16 +32,16 @@ function calCommon(str1: string, str2: string): number {
     let set2 = new Set(str2.split(''));
     for (let char of set1) {
         if (set2.has(char)) {
-            rs += 1 << 2;
+            rs += CHARS_CONTAIN_SCORE;
         } else {
-            rs--;
+            rs += CHARS_NOT_CONTAIN_SCORE;
         }
     }
     for (let char of set2) {
         if (set1.has(char)) {
-            rs += 1 << 2;
+            rs += CHARS_CONTAIN_SCORE;
         } else {
-            rs--;
+            rs += CHARS_NOT_CONTAIN_SCORE;
         }
     }
     return rs;
@@ -53,26 +61,26 @@ function calSimilarity(word1: Word, word2: Word): number {
         if (item2) {
             const freq1 = item.freq;
             const freq2 = item2.freq;
-            similarity += (freq1 * freq2) << 16;
+            similarity += (freq1 * freq2) * TRAN_EQUALS_BASE_SCORE;
         }
     })
 
-    similarity += calCommon(word1Trans.map(item => item.cn).join(''), word2Trans.map((item) => item.cn).join(''));
-    similarity += calCommon(word1.word, word2.word) << 16;
+    similarity += calCommon(word1Trans.map(item => item.cn).join(''), word2Trans.map((item) => item.cn).join('')) * TRANS_CHARS_COMMON_FACTOR;
+    similarity += calCommon(word1.word, word2.word) * WORD_COMMON_FACTOR;
     if (
         word1.word.includes(word2.word) ||
         word2.word.includes(word1.word)
     ) {
-        similarity += 1 << 20;
+        similarity += WORD_CONTAIN_SCORE;
     }
     if (
         word1.relWords.rels.findIndex(rel => rel.words.findIndex(word => word.c === word2.word) !== -1) !== -1 ||
         word2.relWords.rels.findIndex(rel => rel.words.findIndex(word => word.c === word1.word) !== -1) !== -1
     ) {
-        similarity += 1 << 20;
+        similarity += WORD_CONTAIN_SCORE;
         // console.log('relWords', word1.word, word2.word)
     }
-    return similarity;
+    return similarity + Math.pow(Math.random(), 2) * FUZZ_SCORE_BASE;
 }
 
 export function buildQuestion(word: Word, list: Word[], maxCount: number = 4): Question {
