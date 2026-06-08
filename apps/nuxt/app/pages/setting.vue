@@ -66,7 +66,8 @@ type HistoryBackupMeta = HistoryBackupIndexItem & {
 }
 
 let route = useRoute()
-let title = APP_NAME + ' 设置'
+const { t } = useI18n()
+let title = APP_NAME + t('setting_page_title_suffix')
 useSeoMeta({
   title: title,
   description: title,
@@ -142,7 +143,7 @@ useEventListener('keydown', (e: KeyboardEvent) => {
       for (const [k, v] of Object.entries(settingStore.shortcutKeyMap)) {
         if (v === shortcutKey && k !== editShortcutKey) {
           settingStore.shortcutKeyMap[editShortcutKey] = DefaultShortcutKeyMap[editShortcutKey]
-          return Toast.warning('快捷键重复！')
+          return Toast.warning(t('shortcut_key_duplicate'))
         }
       }
       settingStore.shortcutKeyMap[editShortcutKey] = shortcutKey
@@ -167,34 +168,34 @@ function focusShortcutInput() {
 
 // 快捷键中文名称映射
 function getShortcutKeyName(key: string): string {
-  const shortcutKeyNameMap = {
-    ShowWord: '显示单词',
-    EditArticle: '编辑文章',
-    Next: '下一个',
-    Previous: '上一个',
-    Ignore: '跳过单词',
-    ToggleSimple: '切换已掌握状态',
-    ToggleCollect: '切换收藏状态',
-    NextChapter: '下一组',
-    PreviousChapter: '上一组',
-    NextStep: '下一阶段',
-    RepeatChapter: '重复本组',
-    DictationChapter: '默写本组',
-    PlayWordPronunciation: '播放发音',
-    ToggleShowTranslate: '切换显示翻译',
-    ToggleDictation: '切换默写模式',
-    ToggleTheme: '切换主题',
-    ToggleConciseMode: '切换底部工具栏和右侧列表',
-    ToggleToolbar: '切换底部工具栏',
-    TogglePanel: '切换右侧列表',
-    RandomWrite: '随机默写',
-    KnowWord: '认识单词',
-    UnknownWord: '不认识单词',
-    MasteredWord: '已掌握单词',
-    ChooseA: '选A',
-    ChooseB: '选B',
-    ChooseC: '选C',
-    ChooseD: '选D',
+  const shortcutKeyNameMap: Record<string, string> = {
+    ShowWord: t('shortcut_show_word'),
+    EditArticle: t('shortcut_edit_article'),
+    Next: t('shortcut_next'),
+    Previous: t('shortcut_previous'),
+    Ignore: t('shortcut_ignore'),
+    ToggleSimple: t('shortcut_toggle_simple'),
+    ToggleCollect: t('shortcut_toggle_collect'),
+    NextChapter: t('shortcut_next_chapter'),
+    PreviousChapter: t('shortcut_previous_chapter'),
+    NextStep: t('shortcut_next_step'),
+    RepeatChapter: t('shortcut_repeat_chapter'),
+    DictationChapter: t('shortcut_dictation_chapter'),
+    PlayWordPronunciation: t('shortcut_play_word_pronunciation'),
+    ToggleShowTranslate: t('shortcut_toggle_show_translate'),
+    ToggleDictation: t('shortcut_toggle_dictation'),
+    ToggleTheme: t('shortcut_toggle_theme'),
+    ToggleConciseMode: t('shortcut_toggle_concise_mode'),
+    ToggleToolbar: t('shortcut_toggle_toolbar'),
+    TogglePanel: t('shortcut_toggle_panel'),
+    RandomWrite: t('shortcut_random_write'),
+    KnowWord: t('shortcut_know_word'),
+    UnknownWord: t('shortcut_unknown_word'),
+    MasteredWord: t('shortcut_mastered_word'),
+    ChooseA: t('shortcut_choose_a'),
+    ChooseB: t('shortcut_choose_b'),
+    ChooseC: t('shortcut_choose_c'),
+    ChooseD: t('shortcut_choose_d'),
   }
 
   return shortcutKeyNameMap[key] || key
@@ -203,7 +204,7 @@ function getShortcutKeyName(key: string): string {
 function resetShortcutKeyMap() {
   editShortcutKey = ''
   settingStore.shortcutKeyMap = cloneDeep(DefaultShortcutKeyMap)
-  Toast.success('恢复成功')
+  Toast.success(t('restore_success'))
 }
 
 let importLoading = $ref(false)
@@ -242,9 +243,9 @@ async function importJson(str: string) {
     const pushOk = await dataSyncPersistence.forcePushLocalDataToRemote(data)
     runtimeStore.globalLoading = false
     if (pushOk) {
-      Toast.success('导入数据成功，已强制覆盖远程数据')
+      Toast.success(t('import_success_overwrite_remote'))
     } else {
-      Toast.success(hasRemote ? '导入数据成功，但推送远程失败' : '导入成功！')
+      Toast.success(hasRemote ? t('import_success_push_failed') : t('import_success'))
     }
     runtimeStore.isNew = APP_VERSION.version > Number(data.setting?.val?.webAppVersion ?? APP_VERSION.version)
     data.setting.val.load = true
@@ -253,7 +254,7 @@ async function importJson(str: string) {
     store.setState(data.dict.val)
     showBackupGate = false
   } catch (err) {
-    return Toast.error('导入失败！')
+    return Toast.error(t('import_failed'))
   } finally {
     importLoading = false
   }
@@ -279,7 +280,7 @@ async function importData(e) {
 
       const dataFile = zip.file('data.json')
       if (!dataFile) {
-        return Toast.error('缺少 data.json，导入失败')
+        return Toast.error(t('missing_data_json'))
       }
 
       const mp3Folder = zip.folder('mp3')
@@ -300,12 +301,12 @@ async function importData(e) {
       const str = await dataFile.async('string')
       await importJson(str)
     } catch (e) {
-      Toast.error(e?.message || e || '导入失败')
+      Toast.error(e?.message || e || t('import_failed'))
     } finally {
       importLoading = false
     }
   } else {
-    Toast.error('不支持的文件类型')
+    Toast.error(t('unsupported_file_type'))
   }
   importLoading = false
 }
@@ -381,9 +382,9 @@ async function restoreHistoryData() {
     const pushOk = await dataSyncPersistence.forcePushLocalDataToRemote(data)
     runtimeStore.globalLoading = false
     if (pushOk) {
-      Toast.success('历史数据恢复成功，已强制覆盖远程数据')
+      Toast.success(t('history_restore_success_overwrite_remote'))
     } else {
-      Toast.success(hasRemote ? '历史数据已恢复，但推送远程失败' : '恢复成功！')
+      Toast.success(hasRemote ? t('history_restore_success_push_failed') : t('restore_success_short'))
     }
     runtimeStore.isNew = APP_VERSION.version > Number(data.setting?.val?.webAppVersion ?? APP_VERSION.version)
     data.setting.val.load = true
@@ -393,7 +394,7 @@ async function restoreHistoryData() {
     showBackupGate = false
     showHistoryDialog = false
   } catch (error) {
-    Toast.error('恢复失败：' + ((error as Error)?.message ?? String(error)))
+    Toast.error(t('restore_failed') + ((error as Error)?.message ?? String(error)))
   } finally {
     restoreLoading = false
   }
@@ -408,12 +409,12 @@ async function onSbFirstSyncChoice(action: 'push_local' | 'pull_remote') {
     if (action === 'push_local') {
       let localData = await getExportedData()
       const ok = await dataSyncPersistence.forcePushLocalDataToRemote(localData.val, tempSbInstance)
-      if (!ok) throw new Error('本地推送失败')
-      Toast.success('已将本地数据推送到远程')
+      if (!ok) throw new Error(t('push_local_failed'))
+      Toast.success(t('push_local_success'))
     } else {
       const ok = await dataSyncPersistence.pullAllRemoteToLocal(tempSbInstance)
-      if (!ok) throw new Error('拉取远程失败')
-      Toast.success('已拉取远程数据到本地')
+      if (!ok) throw new Error(t('pull_remote_failed'))
+      Toast.success(t('pull_remote_success'))
     }
     Supabase.setStatus('success')
     sbStatus = Supabase.getStatus()
@@ -423,7 +424,7 @@ async function onSbFirstSyncChoice(action: 'push_local' | 'pull_remote') {
     const msg = (error as Error)?.message ?? String(error)
     Supabase.setStatus('error', msg)
     sbStatus = Supabase.getStatus()
-    Toast.error('同步失败：' + msg)
+    Toast.error(t('sync_error_with_msg') + msg)
   } finally {
     sbSyncChoiceLoading = false
   }
@@ -445,7 +446,7 @@ async function clearAllData() {
   sbForm.url = ''
   sbForm.key = ''
   sbStatus = { status: 'idle', statusMessage: undefined }
-  Toast.success('清除成功')
+  Toast.success(t('clear_success'))
 }
 
 let sbFormRef = $ref<FormType>()
@@ -463,8 +464,8 @@ watch(
 )
 
 let sbFormRules = {
-  url: [{ required: true, message: '请输入 Supabase  Url', trigger: 'blur' }],
-  key: [{ required: true, message: '请输入  Supabase  Key', trigger: 'blur' }],
+  url: [{ required: true, message: t('supabase_url_required'), trigger: 'blur' }],
+  key: [{ required: true, message: t('supabase_key_required'), trigger: 'blur' }],
 }
 
 //能否使用同步数据功能,如果有自定义的文章里面有音频，则不可以
@@ -493,9 +494,9 @@ async function doSaveSbConfig() {
     // 检测 typewords_data 表是否存在
     const { data: existingData, error: checkError } = await tempSbInstance.from('typewords_data').select('type')
     if (checkError) {
-      Supabase.setStatus('error', checkError?.message ?? '表不存在')
+      Supabase.setStatus('error', checkError?.message ?? t('table_not_exist'))
       sbStatus = Supabase.getStatus()
-      Toast.error('表不存在')
+      Toast.error(t('table_not_exist'))
     } else {
       // 表已存在，检测是否需要插入默认数据
       const rows = (existingData ?? []) as { type: string }[]
@@ -527,7 +528,7 @@ async function doSaveSbConfig() {
         Supabase.setStatus('success')
         sbStatus = Supabase.getStatus()
         await onSbFirstSyncChoice('push_local')
-        Toast.success('保存成功')
+        Toast.success(t('save_success'))
         Supabase.saveConfig(sbForm?.url, sbForm?.key)
         transferOk()
       }
@@ -536,7 +537,7 @@ async function doSaveSbConfig() {
     const msg = (error as Error)?.message ?? String(error)
     Supabase.setStatus('error', msg)
     sbStatus = Supabase.getStatus()
-    Toast.error('出现错误：' + msg)
+    Toast.error(t('error_occurred') + msg)
   } finally {
     configLoading = false
   }
@@ -549,7 +550,7 @@ function removeSbConfig() {
       sbForm.url = ''
       sbForm.key = ''
       sbStatus = { status: 'idle', statusMessage: undefined }
-      Toast.success('清除成功')
+      Toast.success(t('clear_success'))
       setTimeout(() => {
         location.href = '/words'
       }, 1000)
@@ -583,7 +584,7 @@ function removeSbConfig() {
             </div>
             <div class="tab" :class="tabIndex === 4 && 'active'" @click="tabIndex = 4">
               <IconClarityVolumeUpLine />
-              <span>音效设置</span>
+              <span>{{ $t('sound_settings') }}</span>
             </div>
             <div class="tab" :class="tabIndex === 5 && 'active'" @click="tabIndex = 5">
               <IconFluentDatabasePerson20Regular />
@@ -601,7 +602,7 @@ function removeSbConfig() {
               "
             >
               <IconFluentCloudSync20Regular />
-              <span>数据同步</span>
+              <span>{{ $t('data_sync') }}</span>
               <div class="red-point" v-if="runtimeStore.isError || runtimeStore.isNew"></div>
             </div>
             <div class="tab" :class="tabIndex === 7 && 'active'" @click="tabIndex = 7">
@@ -640,68 +641,67 @@ function removeSbConfig() {
           <div v-if="tabIndex === 5">
             <!--            导出数据-->
             <SettingItem
-              title="导出数据"
-              :desc="`${$t('data_saved_locally')}。如果您需要在不同的设备、浏览器上使用 ${APP_NAME}，
-              您需要手动进行数据导出和导入`"
+              :title="$t('export_data_title')"
+              :desc="$t('data_saved_locally') + $t('export_data_desc_suffix', { appName: APP_NAME })"
             >
               <BaseButton :loading="exportLoading" @click="exportData()">{{ $t('export_data_backup') }}</BaseButton>
             </SettingItem>
-            <div class="text-gray text-sm">💾 导出的ZIP文件包含所有学习数据，可在其他设备上导入恢复</div>
+            <div class="text-gray text-sm">💾 {{ $t('export_zip_hint') }}</div>
             <div class="line my-3"></div>
 
             <!--            导入数据-->
-            <SettingItem title="导入数据">
+            <SettingItem :title="$t('import_data_title')">
               <BaseButton @click="openGate('import')" :loading="importLoading">{{
                 $t('import_data_restore')
               }}</BaseButton>
             </SettingItem>
-            <div>请注意，导入数据将<b class="text-red"> 完全覆盖 </b>当前所有数据，请谨慎操作。</div>
-
+            <i18n-t keypath="import_overwrite_warning" tag="span">
+              <strong class="color-red">{{ $t('complete_overflow') }}</strong>
+            </i18n-t>
             <!--            新网站同步-->
             <template v-if="isNewHost">
               <div class="line my-3"></div>
-              <SettingItem title="迁移 2study.top 网站数据">
-                <BaseButton @click="openGate('transfer')">迁移</BaseButton>
+              <SettingItem :title="$t('migrate_2study_title')">
+                <BaseButton @click="openGate('transfer')">{{ $t('migrate_btn') }}</BaseButton>
               </SettingItem>
-              <div>请注意，迁移数据后将<b class="text-red"> 完全覆盖 </b>当前所有数据，请谨慎操作。</div>
+              <i18n-t keypath="migrate_overwrite_warning" tag="span">
+                <strong class="color-red">{{ $t('complete_overflow') }}</strong>
+              </i18n-t>
             </template>
 
             <div class="line my-3"></div>
-            <SettingItem title="其他"> </SettingItem>
+            <SettingItem :title="$t('other')"> </SettingItem>
             <div class="flex gap-space">
-              <BaseButton @click="openHistoryDialog">历史数据</BaseButton>
-              <PopConfirm title="该操作将会清除所有数据，确认继续？" @confirm="clearAllData">
-                <BaseButton>清除所有数据</BaseButton>
+              <BaseButton @click="openHistoryDialog">{{ $t('history_data') }}</BaseButton>
+              <PopConfirm :title="$t('clear_all_data_confirm')" @confirm="clearAllData">
+                <BaseButton>{{ $t('clear_all_data') }}</BaseButton>
               </PopConfirm>
             </div>
           </div>
 
           <div v-if="tabIndex === 6">
             <!--          Supabase 设置  -->
-            <SettingItem title="Supabase 配置" desc="网站不会上传您的 url 和 key，只保存在浏览器本地(Local storage)">
+            <SettingItem :title="$t('supabase_config')" :desc="$t('supabase_config_desc')">
               <div v-if="sbStatus.status !== 'idle'" class="mt-2 text-sm">
-                <span v-if="sbStatus.status === 'success'" class="text-green"
-                  >状态：同步正常运行中，数据已同步到云端</span
-                >
+                <span v-if="sbStatus.status === 'success'" class="text-green">{{ $t('sync_status_running') }}</span>
                 <span v-else-if="sbStatus.status === 'error'" class="text-red">
-                  同步状态：失败{{ sbStatus.statusMessage ? `（${sbStatus.statusMessage}）` : '' }}
+                  {{ $t('sync_status_failed') }}{{ sbStatus.statusMessage ? `（${sbStatus.statusMessage}）` : '' }}
                 </span>
-                <span v-else-if="sbStatus.status === 'syncing'">同步状态：同步中…</span>
+                <span v-else-if="sbStatus.status === 'syncing'">{{ $t('sync_status_syncing') }}</span>
               </div>
             </SettingItem>
 
             <div class="mb-6">
               <div>
-                Supbase 官网：
+                {{ $t('supabase_website') }}
                 <a href="https://supabase.com/" target="_blank">https://supabase.com/</a>
               </div>
               <div>
-                Supbase 使用教程：
+                {{ $t('supabase_tutorial') }}
                 <a href="https://www.kdocs.cn/l/cduLx52XXXgw" target="_blank">https://www.kdocs.cn/l/cduLx52XXXgw</a>
               </div>
               <div>
-                Supbase 是一个（免费版 500 MB数据库）在线数据库工具，可以用来保存/同步
-                {{ APP_NAME }} 的数据，免费版额度个人已够使用
+                {{ $t('supabase_intro', { appName: APP_NAME }) }}
               </div>
             </div>
 
@@ -715,16 +715,16 @@ function removeSbConfig() {
                 </FormItem>
               </Form>
               <div class="flex justify-end">
-                <BaseButton @click="removeSbConfig" :disabled="!canSyncToServe">删除配置</BaseButton>
+                <BaseButton @click="removeSbConfig" :disabled="!canSyncToServe">{{ $t('delete_config') }}</BaseButton>
                 <BaseButton @click="openSupabaseSaveGate" :loading="configLoading" :disabled="!canSyncToServe">{{
-                  runtimeStore.isError ? '重试' : '保存配置'
+                  runtimeStore.isError ? $t('retry') : $t('save_config')
                 }}</BaseButton>
               </div>
               <div
                 class="absolute top-0 left-0 w-full h-full bg-white opacity-80 cursor-not-allowed z-10 center rounded-md"
                 v-if="!canSyncToServe"
               >
-                <div class="text-red">检测到自定义文章里面有自定义音频，无法使用同步功能</div>
+                <div class="text-red">{{ $t('custom_audio_sync_disabled') }}</div>
               </div>
             </div>
           </div>
@@ -782,18 +782,18 @@ function removeSbConfig() {
   <BackupGateDialog v-model="showBackupGate">
     <template v-slot="{ disabled }">
       <BaseButton @click="doSaveSbConfig" :disabled="disabled" v-if="pendingNextAction === 'supabase_save'">{{
-        runtimeStore.isError ? '重试' : '保存配置'
+        runtimeStore.isError ? $t('retry') : $t('save_config')
       }}</BaseButton>
-      <BaseButton @click="showTransfer = true" :disabled="disabled" v-else-if="pendingNextAction === 'transfer'"
-        >迁移</BaseButton
-      >
+      <BaseButton @click="showTransfer = true" :disabled="disabled" v-else-if="pendingNextAction === 'transfer'">{{
+        $t('migrate_btn')
+      }}</BaseButton>
       <BaseButton
         v-else-if="pendingNextAction === 'restore_history'"
         @click="restoreHistoryData"
         :disabled="disabled"
         :loading="restoreLoading"
       >
-        恢复此历史数据
+        {{ $t('restore_history_data') }}
       </BaseButton>
 
       <UploadButton
@@ -808,32 +808,38 @@ function removeSbConfig() {
     </template>
   </BackupGateDialog>
 
-  <Dialog v-model="showHistoryDialog" title="历史数据">
+  <Dialog v-model="showHistoryDialog" :title="$t('history_data_dialog_title')">
     <div class="p-4 w-120 max-h-100 overflow-auto">
-      <div v-if="!historyBackups.length" class="color-gray">暂无历史数据</div>
+      <div v-if="!historyBackups.length" class="color-gray">{{ $t('no_history_data') }}</div>
       <div v-else class="flex flex-col gap-3">
-        <div>这里是每次 {{ APP_NAME }} 更新后/报错后自动保存的用户数据，如果您的数据被损坏，您可在此尝试恢复</div>
+        <div>{{ $t('history_data_desc', { appName: APP_NAME }) }}</div>
         <div v-for="(item, i) in historyBackups" :key="item.key" class="border rounded-md flex justify-between">
           <div>
-            <div class="">{{ i + 1 }}. 版本号：{{ item.hash }}</div>
-            <div class="color-gray">自动备份时间：{{ formatHistoryTime(item.createdAt) }}</div>
+            <div class="">{{ i + 1 }}{{ $t('index_version_label') }}{{ item.hash }}</div>
+            <div class="color-gray">{{ $t('auto_backup_time') }}{{ formatHistoryTime(item.createdAt) }}</div>
           </div>
           <div class="mt-2">
-            <BaseButton @click="openHistoryRestoreGate(item)" :disabled="restoreLoading">恢复此版本</BaseButton>
+            <BaseButton @click="openHistoryRestoreGate(item)" :disabled="restoreLoading">{{
+              $t('restore_this_version')
+            }}</BaseButton>
           </div>
         </div>
       </div>
     </div>
   </Dialog>
 
-  <Dialog v-model="showSbFirstSyncChoiceDialog" title="检测到远程已有数据">
+  <Dialog v-model="showSbFirstSyncChoiceDialog" :title="$t('remote_data_detected_title')">
     <div class="p-4 w-120">
-      <div class="">检测到远端已存在数据，请选择同步方向：</div>
-      <div class="color-gray mt-2">- 本地推送：用当前本地数据覆盖远程</div>
-      <div class="color-gray">- 拉取远程：用远程数据覆盖当前本地</div>
+      <div class="">{{ $t('remote_data_detected_desc') }}</div>
+      <div class="color-gray mt-2">{{ $t('push_local_desc') }}</div>
+      <div class="color-gray">{{ $t('pull_remote_desc') }}</div>
       <div class="flex justify-end mt-4">
-        <BaseButton :loading="sbSyncChoiceLoading" @click="onSbFirstSyncChoice('push_local')">本地推送</BaseButton>
-        <BaseButton :loading="sbSyncChoiceLoading" @click="onSbFirstSyncChoice('pull_remote')">拉取远程</BaseButton>
+        <BaseButton :loading="sbSyncChoiceLoading" @click="onSbFirstSyncChoice('push_local')">{{
+          $t('push_local')
+        }}</BaseButton>
+        <BaseButton :loading="sbSyncChoiceLoading" @click="onSbFirstSyncChoice('pull_remote')">{{
+          $t('pull_remote')
+        }}</BaseButton>
       </div>
     </div>
   </Dialog>

@@ -1,6 +1,10 @@
 <script setup lang="ts">
 let logList = [
   {
+    date: '2026/06/08',
+    content: '随机复习/测试时，支持自定义单词范围；优化多语言',
+  },
+  {
     date: '2026/06/04',
     content: '修复所有已知的单词、文章错误',
   },

@@ -124,19 +124,19 @@ onMounted(() => {
       <div class="nav-items">
         <div class="nav-item" @click="router.push('/')" :class="{ active: route.path === '/' }">
           <IconFluentHome20Regular />
-          <span>主页</span>
+          <span>{{ $t('home_page') }}</span>
         </div>
         <div class="nav-item" @click="router.push('/words')" :class="{ active: route.path?.includes('/words') }">
           <IconFluentTextUnderlineDouble20Regular />
-          <span>单词</span>
+          <span>{{ $t('words') }}</span>
         </div>
         <div class="nav-item" @click="router.push('/articles')" :class="{ active: route.path?.includes('/articles') }">
           <IconFluentBookLetter20Regular />
-          <span>文章</span>
+          <span>{{ $t('articles') }}</span>
         </div>
         <div class="nav-item" @click="router.push('/setting')" :class="{ active: route.path === '/setting' }">
           <IconFluentSettings20Regular />
-          <span>设置</span>
+          <span>{{ $t('setting') }}</span>
           <div class="red-point" v-if="runtimeStore.isNew || runtimeStore.isError"></div>
         </div>
       </div>
@@ -156,7 +156,7 @@ onMounted(() => {
         @click="router.push('/setting?index=6 ')"
         v-if="runtimeStore.isError"
       >
-        <ToastComponent type="error" :duration="0" :shadow="false" :showClose="false" message="同步失败" />
+        <ToastComponent type="error" :duration="0" :shadow="false" :showClose="false" :message="$t('sync_failed_toast')" />
       </div>
       <!--      <slot></slot>-->
       <router-view></router-view>

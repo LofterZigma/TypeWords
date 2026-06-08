@@ -61,7 +61,7 @@ function previewTtsVoice(voiceName: string) {
 <template>
   <div>
     <!-- 单词发音 -->
-    <SettingItem mainTitle="单词发音" />
+    <SettingItem :mainTitle="$t('word_pronunciation')" />
     <SettingItem :title="$t('pronunciation_accent')" :desc="$t('pronunciation_accent_desc')">
       <Select v-model="settingStore.soundType" :placeholder="$t('please_select')" class="w-50!">
         <Option :label="$t('us_accent')" value="us" />
@@ -81,50 +81,50 @@ function previewTtsVoice(voiceName: string) {
 
     <!-- TTS 声色 -->
     <div class="line"></div>
-    <SettingItem mainTitle="TTS 声色" />
-    <div>试听句子：{{ exampleText }}</div>
+    <SettingItem :mainTitle="$t('tts_voice')" />
+    <div>{{ $t('tts_voice_preview_sentence') }}{{ exampleText }}</div>
     <SettingItem
-      title="TTS 声色"
-      desc="例句使用浏览器内置 TTS 发音。若例句无声，请在此选择一个可用声色并点击右侧喇叭试听，选到有声音的即可。不同浏览器/设备支持的声色不同，此设置仅对当前浏览器生效。"
+      :title="$t('tts_voice_setting_title')"
+      :desc="$t('tts_voice_setting_desc')"
     >
       <Select
         :key="ttsSelectKey"
         v-model="currentTtsVoice"
-        :placeholder="ttsVoiceList.length ? '请选择声色' : '浏览器暂无可用声色'"
+        :placeholder="ttsVoiceList.length ? $t('tts_select_placeholder') : $t('tts_no_voice_available')"
         class="w-80!"
       >
         <Option v-for="voice in ttsVoiceList" :key="voice.name" :label="voice.name" :value="voice.name">
           <div class="flex justify-between items-center w-full">
-            <span class="truncate">{{ voice.name + `（${voice.localService ? `本地` : ` 网络`}）` }}</span>
+            <span class="truncate">{{ voice.name + `（${voice.localService ? $t('tts_local_voice') : $t('tts_network_voice')}）` }}</span>
             <VolumeIcon :time="100" @click="previewTtsVoice(voice.name)" />
           </div>
         </Option>
       </Select>
     </SettingItem>
     <div v-if="!currentTtsVoice" class="text-sm text-orange-500 mt-1 mb-2">
-      ⚠️ 当前未设置 TTS 声色，例句可能无法发音，建议逐个试听选择可用声色。
+      {{ $t('tts_no_voice_warning') }}
     </div>
     
 
     <!-- 文章音效 -->
     <div class="line"></div>
-    <SettingItem mainTitle="文章音效" />
+    <SettingItem :mainTitle="$t('article_sound_settings')" />
     <SettingItem :title="$t('auto_play_sentence')">
       <Switch v-model="settingStore.articleSound" />
     </SettingItem>
     <SettingItem :title="$t('play_next_after_end')">
       <Switch v-model="settingStore.articleAutoPlayNext" />
     </SettingItem>
-    <SettingItem title="音量">
+    <SettingItem :title="$t('article_volume')">
       <Slider v-model="settingStore.articleSoundVolume" showText showValue unit="%" />
     </SettingItem>
-    <SettingItem title="倍速">
+    <SettingItem :title="$t('article_speed')">
       <Slider v-model="settingStore.articleSoundSpeed" :step="0.1" :min="0.5" :max="3" showText showValue />
     </SettingItem>
 
     <!-- 按键音效 -->
     <div class="line"></div>
-    <SettingItem mainTitle="按键音效" />
+    <SettingItem :mainTitle="$t('keyboard_sound_settings')" />
     <SettingItem :title="$t('keyboard_sound')">
       <Switch v-model="settingStore.keyboardSound" />
     </SettingItem>
@@ -144,11 +144,11 @@ function previewTtsVoice(voiceName: string) {
 
     <!-- 效果音 -->
     <div class="line"></div>
-    <SettingItem mainTitle="效果音" />
+    <SettingItem :mainTitle="$t('effect_sound_settings')" />
     <SettingItem :title="$t('effect_sound')">
       <Switch v-model="settingStore.effectSound" />
     </SettingItem>
-    <SettingItem title="音量">
+    <SettingItem :title="$t('effect_volume')">
       <Slider v-model="settingStore.effectSoundVolume" showText showValue unit="%" />
     </SettingItem>
 

@@ -488,6 +488,60 @@ export function shuffle<T>(array: T[]): T[] {
   return result
 }
 
+export type ShufflePracticeRange = {
+  start: number
+  end: number
+}
+
+export type ShufflePracticeSetting = {
+  total: number
+  range: ShufflePracticeRange
+}
+
+export function normalizeShufflePracticeRange(range: ShufflePracticeRange, max: number): ShufflePracticeRange {
+  const safeMax = Math.max(0, Math.floor(Number(max) || 0))
+  let start = Math.floor(Number(range?.start) || 0)
+  let end = Math.floor(Number(range?.end) || 0)
+
+  start = Math.min(Math.max(start, 0), safeMax)
+  end = Math.min(Math.max(end, 0), safeMax)
+
+  if (start > end) {
+    start = end
+  }
+
+  return { start, end }
+}
+
+export function toShufflePracticeRange(startNo: number, endNo: number, max: number): ShufflePracticeRange {
+  const safeEndNo = Math.floor(Number(endNo) || 0)
+  const safeStartNo = safeEndNo > 0 ? Math.max(1, Math.floor(Number(startNo) || 1)) : 0
+  return normalizeShufflePracticeRange(
+    {
+      start: safeStartNo > 0 ? safeStartNo - 1 : 0,
+      end: safeEndNo,
+    },
+    max
+  )
+}
+
+export function getShufflePracticeWords<T extends { word: string }>(
+  words: T[],
+  setting: ShufflePracticeSetting,
+  ignoreSet?: Set<string>
+) {
+  const range = normalizeShufflePracticeRange(setting.range, words.length)
+  const total = Math.max(0, Math.floor(Number(setting.total) || 0))
+  const candidates = words.slice(range.start, range.end).filter(v => !ignoreSet?.has(v.word))
+
+  return {
+    range,
+    total,
+    available: candidates.length,
+    words: shuffle(candidates).slice(0, total),
+  }
+}
+
 export function last<T>(array: T[]): T | undefined {
   return array.length > 0 ? array[array.length - 1] : undefined
 }

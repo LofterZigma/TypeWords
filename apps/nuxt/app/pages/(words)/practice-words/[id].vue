@@ -17,6 +17,7 @@ import {
   _nextTick,
   cloneDeep,
   debounce,
+  getShufflePracticeWords,
   isMobile,
   loadJsLib,
   resourceWrap,
@@ -857,10 +858,15 @@ async function continueStudy() {
   let ignoreList = [store.allIgnoreWords, store.knownWords][settingStore.ignoreSimpleWord ? 0 : 1]
   //随机练习单独处理
   if (settingStore.wordPracticeMode === WordPracticeMode.Shuffle) {
-    temp.review = shuffle(store.sdict.words.filter(v => !ignoreList.includes(v.word))).slice(
-      0,
-      runtimeStore.routeData.total ?? temp.review.length
-    )
+    const ignoreSet = [store.allIgnoreWordsSet, store.knownWordsSet][settingStore.ignoreSimpleWord ? 0 : 1]
+    temp.review = getShufflePracticeWords(
+      store.sdict.words,
+      {
+        total: runtimeStore.routeData?.total ?? temp.review.length,
+        range: runtimeStore.routeData?.shuffleRange ?? { start: 0, end: store.sdict.lastLearnIndex },
+      },
+      ignoreSet
+    ).words
   } else {
     //这里判断是否显示结算弹框，如果显示了结算弹框的话，就不用加进度了
     if (!isComplete) {

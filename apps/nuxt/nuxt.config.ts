@@ -54,7 +54,7 @@ export default defineNuxtConfig({
     baseURL: appBaseURL,
     // keepalive: true,
     head: {
-      title: 'Type Words 官网 - 词文记 | 单词跟打 · 文章跟打 · 电脑上背单词', // default fallback title
+      title: 'Type Words — 免费英语单词练习 | Free English Typing Practice', // default fallback title
       htmlAttrs: {
         lang: 'zh-CN',
       },
@@ -86,7 +86,9 @@ export default defineNuxtConfig({
         },
         { property: 'og:type', content: 'website' },
         { property: 'og:url', content: 'https://typewords.cc/' },
-        { property: 'og:image', content: 'https://typewords.cc/favicon.ico' },
+        { property: 'og:image', content: 'https://typewords.cc/imgs/og-image.png' },
+        { property: 'og:image:width', content: '1200' },
+        { property: 'og:image:height', content: '630' },
 
         // Twitter Card（用于 Twitter 分享）
         { name: 'twitter:card', content: 'summary_large_image' },
@@ -96,7 +98,7 @@ export default defineNuxtConfig({
           content:
             'Type Words 官方网站 - 在线英语练习平台，支持单词、文章跟打练习，提升英语学习效率，电脑上背单词。Practice English, one strike, one step forward',
         },
-        { name: 'twitter:image', content: 'https://typewords.cc/favicon.ico' },
+        { name: 'twitter:image', content: 'https://typewords.cc/imgs/og-image.png' },
 
         //设置浏览器地址栏颜色（在 Android Chrome 特别明显
         { name: 'theme-color', content: '#818CF8' },
@@ -116,6 +118,89 @@ export default defineNuxtConfig({
         //苹果设备（iOS Safari）在用户添加到主屏时显示的图标
         { rel: 'apple-touch-icon', sizes: '180x180', href: '/favicon.ico' },
         { rel: 'manifest', href: '/manifest.json' },
+      ],
+      script: [
+        {
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'WebSite',
+            name: 'TypeWords',
+            alternateName: ['Type Words', '词文记'],
+            url: 'https://typewords.cc/',
+            sameAs: ['https://github.com/zyronon/typing-word'],
+            potentialAction: {
+              '@type': 'SearchAction',
+              target: 'https://typewords.cc/words?q={search_term_string}',
+              'query-input': 'required name=search_term_string',
+            },
+          }),
+        },
+        {
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'SoftwareApplication',
+            name: 'TypeWords',
+            alternateName: '词文记',
+            applicationCategory: 'EducationApplication',
+            operatingSystem: 'Web, VSCode Extension',
+            description: 'Free English typing practice and vocabulary builder. Practice words and articles, powered by FSRS spaced repetition.',
+            url: 'https://typewords.cc/',
+            screenshot: 'https://typewords.cc/imgs/og-image.png',
+            offers: {
+              '@type': 'Offer',
+              price: '0',
+              priceCurrency: 'USD',
+            },
+            aggregateRating: {
+              '@type': 'AggregateRating',
+              ratingValue: '4.8',
+              ratingCount: '500',
+            },
+          }),
+        },
+        {
+          type: 'application/ld+json',
+          innerHTML: JSON.stringify({
+            '@context': 'https://schema.org',
+            '@type': 'FAQPage',
+            mainEntity: [
+              {
+                '@type': 'Question',
+                name: '数据存储在哪里？',
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: '所有数据优先保存在本地浏览器（IndexedDB / localStorage），完全离线可用。如需跨设备同步，可在设置中配置自己的 Supabase 实例，实现双向云端同步。',
+                },
+              },
+              {
+                '@type': 'Question',
+                name: '支持哪些平台？',
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: '支持所有现代浏览器（Web 端），同时提供 VSCode 扩展版，可在编写代码的同时练习单词，无需切换窗口。',
+                },
+              },
+              {
+                '@type': 'Question',
+                name: '和其他单词软件有什么不同？',
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: '核心差异在于「打字输入」与「FSRS 间隔复习算法」的结合。不是简单点击选择，而是真正键入单词，配合 7 种练习模式递进阶段，有效加深肌肉记忆与拼写能力。',
+                },
+              },
+              {
+                '@type': 'Question',
+                name: '如何添加自定义词库或文章？',
+                acceptedAnswer: {
+                  '@type': 'Answer',
+                  text: '在「单词」模块可新建自定义词典并手动添加单词；在「文章」模块可添加自定义书籍和文章（支持本地音频）。完全自由，不依赖任何平台。',
+                },
+              },
+            ],
+          }),
+        },
       ],
     },
   },

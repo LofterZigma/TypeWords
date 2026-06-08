@@ -20,8 +20,9 @@ import {
   isMobile,
   loadJsLib,
   msToHourMinute,
+  getShufflePracticeWords,
   resourceWrap,
-  shuffle,
+  type ShufflePracticeSetting,
   total,
   useNav,
 } from '@typewords/core/utils'
@@ -433,7 +434,7 @@ async function savePracticeSetting() {
   Toast.success('修改成功')
 }
 
-async function onShufflePracticeSettingOk(total: number) {
+async function onShufflePracticeSettingOk(setting: ShufflePracticeSetting) {
   await dataSync.saveDictState()
   await resetCacheData()
   settingStore.wordPracticeMode = editingWordPracticeMode
@@ -448,17 +449,15 @@ async function onShufflePracticeSettingOk(total: number) {
   })
 
   let ignoreSet = [store.allIgnoreWordsSet, store.knownWordsSet][settingStore.ignoreSimpleWord ? 0 : 1]
-  practiceData.taskWords.review = shuffle(
-    store.sdict.words
-      .slice(0, store.sdict.lastLearnIndex)
-      .filter(v => !ignoreSet.has(v.word))
-  ).slice(0, total)
+  const result = getShufflePracticeWords(store.sdict.words, setting, ignoreSet)
+  practiceData.taskWords.review = result.words
   nav(
     WordPracticeModeUrlMap[editingWordPracticeMode] + '/' + store.sdict.id,
     {},
     {
       ...practiceData,
-      total, //用于再来一组时，随机出正确的长度，因为练习中可能会点击已掌握，导致重学一遍之后长度变少，如果再来一组，此时长度就不正确
+      total: result.words.length, //用于再来一组时，随机出正确的长度，因为练习中可能会点击已掌握，导致重学一遍之后长度变少，如果再来一组，此时长度就不正确
+      shuffleRange: result.range,
     }
   )
 }

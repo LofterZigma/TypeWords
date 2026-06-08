@@ -26,7 +26,7 @@ function toggleTheme() {
   setTheme(theme)
 }
 
-const { locales, setLocale, locale } = useI18n()
+const { locales, setLocale, locale, t } = useI18n()
 
 const typingWords = ['abandon', 'persevere', 'eloquent', 'diligent', 'profound', 'innovation']
 let typingDisplay = $ref('')
@@ -63,44 +63,44 @@ function startTypingAnimation() {
 }
 
 // ── 首屏打字 Demo（PC 端，轻量自包含，不依赖 store）──
-const demoWords = [
+const demoWords = $computed(() => [
   {
     word: 'persevere',
     phonetic: '/ˌpɜːrsɪˈvɪər/',
-    trans: 'v. 坚持不懈，锲而不舍',
+    trans: t('demo_word_persevere_trans'),
     examples: [
-      { en: 'You must persevere if you want to succeed.', zh: '如果你想成功，就必须坚持不懈。' },
-      { en: 'She persevered through years of hardship.', zh: '她在多年的艰辛中坚持了下来。' },
+      { en: 'You must persevere if you want to succeed.', zh: t('demo_word_persevere_ex1') },
+      { en: 'She persevered through years of hardship.', zh: t('demo_word_persevere_ex2') },
     ],
   },
   {
     word: 'eloquent',
     phonetic: '/ˈeləkwənt/',
-    trans: 'adj. 雄辩的，有说服力的',
+    trans: t('demo_word_eloquent_trans'),
     examples: [
-      { en: 'He gave an eloquent speech at the ceremony.', zh: '他在典礼上发表了一篇雄辩的演讲。' },
-      { en: 'Her eloquent writing moved the audience deeply.', zh: '她极具感染力的文字深深打动了观众。' },
+      { en: 'He gave an eloquent speech at the ceremony.', zh: t('demo_word_eloquent_ex1') },
+      { en: 'Her eloquent writing moved the audience deeply.', zh: t('demo_word_eloquent_ex2') },
     ],
   },
   {
     word: 'diligent',
     phonetic: '/ˈdɪlɪdʒənt/',
-    trans: 'adj. 勤勉的，勤奋的',
+    trans: t('demo_word_diligent_trans'),
     examples: [
-      { en: 'A diligent student always finishes homework on time.', zh: '勤奋的学生总是按时完成作业。' },
-      { en: 'He was diligent in his research and rarely took breaks.', zh: '他研究工作勤勤恳恳，很少休息。' },
+      { en: 'A diligent student always finishes homework on time.', zh: t('demo_word_diligent_ex1') },
+      { en: 'He was diligent in his research and rarely took breaks.', zh: t('demo_word_diligent_ex2') },
     ],
   },
   {
     word: 'profound',
     phonetic: '/prəˈfaʊnd/',
-    trans: 'adj. 深刻的，意义深远的',
+    trans: t('demo_word_profound_trans'),
     examples: [
-      { en: 'Reading widely has a profound effect on vocabulary.', zh: '广泛阅读对词汇量有深远的影响。' },
-      { en: 'The discovery had a profound impact on modern science.', zh: '这一发现对现代科学产生了深远的影响。' },
+      { en: 'Reading widely has a profound effect on vocabulary.', zh: t('demo_word_profound_ex1') },
+      { en: 'The discovery had a profound impact on modern science.', zh: t('demo_word_profound_ex2') },
     ],
   },
-]
+])
 let demoIdx = $ref(0)
 let demoInput = $ref('')
 let demoWrong = $ref('')
@@ -197,42 +197,60 @@ function startCounterAnimation() {
 }
 
 let faqOpen = $ref<number | null>(null)
-const faqs = [
-  {
-    q: '数据存储在哪里？',
-    a: '所有数据优先保存在本地浏览器（IndexedDB / localStorage），完全离线可用。如需跨设备同步，可在设置中配置自己的 Supabase 实例，实现双向云端同步。',
-  },
-  {
-    q: '支持哪些平台？',
-    a: '支持所有现代浏览器（Web 端），同时提供 VSCode 扩展版，可在编写代码的同时练习单词，无需切换窗口。',
-  },
-  {
-    q: '和其他单词软件有什么不同？',
-    a: '核心差异在于「打字输入」与「FSRS 间隔复习算法」的结合。不是简单点击选择，而是真正键入单词，配合 7 种练习模式递进阶段，有效加深肌肉记忆与拼写能力。',
-  },
-  {
-    q: '如何添加自定义词库或文章？',
-    a: '在「单词」模块可新建自定义词典并手动添加单词；在「文章」模块可添加自定义书籍和文章（支持本地音频）。完全自由，不依赖任何平台。',
-  },
-]
+const faqs = $computed(() => [
+  { q: t('faq_data_storage_q'), a: t('faq_data_storage_a') },
+  { q: t('faq_platforms_q'), a: t('faq_platforms_a') },
+  { q: t('faq_difference_q'), a: t('faq_difference_a') },
+  { q: t('faq_custom_dict_q'), a: t('faq_custom_dict_a') },
+])
 function toggleFaq(i: number) {
   faqOpen = faqOpen === i ? null : i
 }
 
-const honors = [
-  { icon: '⭐', num: '7k+', label: 'GitHub Stars', sub: '持续获得全球开发者认可' },
-  { icon: '🔥', num: '10w+', label: '累计用户', sub: '选择 TypeWords 提升英语' },
-  { icon: '💬', num: '100+', label: '社区贡献者', sub: '共同完善项目词库' },
-  { icon: '📦', num: '50+', label: '内置词库', sub: '覆盖从小学到 GRE 全场景' },
-]
-const stats = [
-  { suffix: '', label: '种练习模式' },
-  { suffix: '+', label: '内置词库' },
-  { suffix: '', label: '端支持（Web/VSCode）' },
-  { suffix: '%', label: '免费开源' },
-]
+const honors = $computed(() => [
+  { icon: '⭐', num: '8k+', label: 'GitHub Stars', sub: t('honor_stars_sub') },
+  { icon: '🔥', num: '10w+', label: t('honor_users_label'), sub: t('honor_users_sub') },
+  { icon: '💬', num: '100+', label: t('honor_contributors_label'), sub: t('honor_contributors_sub') },
+  { icon: '📦', num: '50+', label: t('honor_dicts_label'), sub: t('honor_dicts_sub') },
+])
+const stats = $computed(() => [
+  { suffix: '', label: t('stats_modes') },
+  { suffix: '+', label: t('stats_dicts') },
+  { suffix: '', label: t('stats_platforms') },
+  { suffix: '%', label: t('stats_free') },
+])
 
 let mobileMenuOpen = $ref(false)
+
+// ── SEO: 动态多语言 title + hreflang ──
+const seoTitle = $computed(() => t('seo_home_title'))
+const seoDesc = $computed(() => t('seo_home_desc'))
+
+useSeoMeta({
+  title: () => seoTitle,
+  ogTitle: () => seoTitle,
+  description: () => seoDesc,
+  ogDescription: () => seoDesc,
+  twitterTitle: () => seoTitle,
+  twitterDescription: () => seoDesc,
+  ogUrl: 'https://typewords.cc/',
+})
+
+const i18nLocaleMap: Record<string, string> = {
+  en: 'en', zh: 'zh-CN', es: 'es', fr: 'fr', pt: 'pt-BR',
+  de: 'de', ru: 'ru', uk: 'uk', ja: 'ja', ko: 'ko',
+  th: 'th', vi: 'vi', id: 'id', tw: 'zh-TW',
+}
+useHead({
+  link: [
+    ...Object.entries(i18nLocaleMap).map(([code, hreflang]) => ({
+      rel: 'alternate',
+      hreflang,
+      href: 'https://typewords.cc/',
+    })),
+    { rel: 'alternate', hreflang: 'x-default', href: 'https://typewords.cc/' },
+  ],
+})
 </script>
 
 <template>
@@ -251,22 +269,22 @@ let mobileMenuOpen = $ref(false)
           <NuxtLink
             to="/words"
             class="font-medium text-[var(--hw-text-2)] no-underline hover:text-[var(--hw-text)] transition-colors duration-150"
-            >单词</NuxtLink
+            >{{ $t('nav_words') }}</NuxtLink
           >
           <NuxtLink
             to="/articles"
             class="text-[.88rem] font-medium text-[var(--hw-text-2)] no-underline hover:text-[var(--hw-text)] transition-colors duration-150"
-            >文章</NuxtLink
+            >{{ $t('nav_articles') }}</NuxtLink
           >
           <NuxtLink
             to="/doc"
             class="text-[.88rem] font-medium text-[var(--hw-text-2)] no-underline hover:text-[var(--hw-text)] transition-colors duration-150"
-            >资料</NuxtLink
+            >{{ $t('nav_resources') }}</NuxtLink
           >
           <NuxtLink
             to="/help"
             class="text-[.88rem] font-medium text-[var(--hw-text-2)] no-underline hover:text-[var(--hw-text)] transition-colors duration-150"
-            >帮助</NuxtLink
+            >{{ $t('nav_help') }}</NuxtLink
           >
         </nav>
         <!-- Actions -->
@@ -300,18 +318,15 @@ let mobileMenuOpen = $ref(false)
           </BaseIcon>
           <!-- GitHub -->
           <a
-            class="flex gap-2 relative text-[var(--hw-text-2)] no-underline"
+            class="flex center gap-1 text-[var(--hw-text-2)] no-underline"
             :href="GITHUB"
             target="_blank"
             aria-label="Github project address"
           >
-            <BaseIcon class="z-1" title="Github" noBg>
+            <BaseIcon title="Github" noBg>
               <IconSimpleIconsGithub />
             </BaseIcon>
-            <NuxtImg
-              class="z-0 shrink-0 h-8 -ml-4"
-              :src="`https://img.shields.io/github/stars/zyronon/typing-word?style=flat-square&label=%20&color=${theme === 'light' ? 'white' : 'black'}`"
-            />
+            <span class="text-xl">8K</span>
           </a>
           <!-- Mobile menu button -->
           <button
@@ -327,10 +342,10 @@ let mobileMenuOpen = $ref(false)
         v-show="mobileMenuOpen"
         class="md:hidden border-t border-[var(--hw-border)] bg-[var(--hw-bg-card)] px-4 py-3 flex flex-col gap-3 text-lg"
       >
-        <NuxtLink to="/words" class="font-medium text-[var(--hw-text-2)] no-underline py-1" @click="mobileMenuOpen = false">单词</NuxtLink>
-        <NuxtLink to="/articles" class="font-medium text-[var(--hw-text-2)] no-underline py-1" @click="mobileMenuOpen = false">文章</NuxtLink>
-        <NuxtLink to="/doc" class="font-medium text-[var(--hw-text-2)] no-underline py-1" @click="mobileMenuOpen = false">资料</NuxtLink>
-        <NuxtLink to="/help" class="font-medium text-[var(--hw-text-2)] no-underline py-1" @click="mobileMenuOpen = false">帮助</NuxtLink>
+        <NuxtLink to="/words" class="font-medium text-[var(--hw-text-2)] no-underline py-1" @click="mobileMenuOpen = false">{{ $t('nav_words') }}</NuxtLink>
+        <NuxtLink to="/articles" class="font-medium text-[var(--hw-text-2)] no-underline py-1" @click="mobileMenuOpen = false">{{ $t('nav_articles') }}</NuxtLink>
+        <NuxtLink to="/doc" class="font-medium text-[var(--hw-text-2)] no-underline py-1" @click="mobileMenuOpen = false">{{ $t('nav_resources') }}</NuxtLink>
+        <NuxtLink to="/help" class="font-medium text-[var(--hw-text-2)] no-underline py-1" @click="mobileMenuOpen = false">{{ $t('nav_help') }}</NuxtLink>
       </div>
     </header>
 
@@ -369,7 +384,7 @@ let mobileMenuOpen = $ref(false)
                 <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor" class="shrink-0">
                   <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/>
                 </svg>
-                8k+ GitHub Stars · 开源免费
+                8k+ GitHub Stars · {{ $t('hero_badge') }}
               </a>
             </div>
 
@@ -382,49 +397,47 @@ let mobileMenuOpen = $ref(false)
 
             <!-- Core value headline -->
             <p class="text-[clamp(1.1rem,2.5vw,1.35rem)] text-[var(--hw-text)] font-semibold mb-3 leading-[1.5]">
-              打字记单词，科学间隔复习
+              {{ $t('hero_tagline') }}
             </p>
             <p class="text-[clamp(.9rem,2vw,1.05rem)] text-[var(--hw-text-2)] mb-6 leading-[1.75] max-w-[520px] mx-auto lg:mx-0">
-              不再靠死记硬背——<strong class="text-[var(--hw-text)] font-semibold">键入单词</strong>强化肌肉记忆，
-              <strong class="text-[var(--hw-text)] font-semibold">记忆曲线算法</strong>自动安排复习时机，
-              配合 <strong class="text-[var(--hw-text)] font-semibold">7 种递进模式</strong>，让每个单词真正刻进脑子里。
+              {{ $t('hero_desc') }}
             </p>
 
             <!-- Core value pills -->
             <div class="flex gap-2 justify-center lg:justify-start flex-wrap mb-6">
-              <span class="value-pill value-pill--purple">⌨️ 打字输入，肌肉记忆</span>
-              <span class="value-pill value-pill--blue">🧠 记忆曲线算法间隔复习</span>
-              <span class="value-pill value-pill--green">🆓 完全免费 · 无需注册</span>
+              <span class="value-pill value-pill--purple">{{ $t('hero_pill_typing') }}</span>
+              <span class="value-pill value-pill--blue">{{ $t('hero_pill_fsrs') }}</span>
+              <span class="value-pill value-pill--green">{{ $t('hero_pill_free') }}</span>
             </div>
 
             <!-- Perks inline -->
             <div class="flex gap-4 sm:gap-6 justify-center lg:justify-start flex-wrap mb-7">
               <div class="flex items-center gap-1.5 text-[.85rem] text-[var(--hw-text-2)]">
-                <span class="w-1.5 h-1.5 rounded-full bg-[#7c3aed] shrink-0 opacity-80"></span>7 种练习模式
+                <span class="w-1.5 h-1.5 rounded-full bg-[#7c3aed] shrink-0 opacity-80"></span>7 {{ $t('hero_perk_modes') }}
               </div>
               <div class="flex items-center gap-1.5 text-[.85rem] text-[var(--hw-text-2)]">
-                <span class="w-1.5 h-1.5 rounded-full bg-[#2563eb] shrink-0 opacity-80"></span>50+ 内置词库
+                <span class="w-1.5 h-1.5 rounded-full bg-[#2563eb] shrink-0 opacity-80"></span>50+ {{ $t('hero_perk_dicts') }}
               </div>
               <div class="flex items-center gap-1.5 text-[.85rem] text-[var(--hw-text-2)]">
-                <span class="w-1.5 h-1.5 rounded-full bg-[#059669] shrink-0 opacity-80"></span>数据本地离线
+                <span class="w-1.5 h-1.5 rounded-full bg-[#059669] shrink-0 opacity-80"></span>{{ $t('hero_perk_offline') }}
               </div>
               <div class="flex items-center gap-1.5 text-[.85rem] text-[var(--hw-text-2)]">
-                <span class="w-1.5 h-1.5 rounded-full bg-[#d97706] shrink-0 opacity-80"></span>Web + 小程序 + VsCode
+                <span class="w-1.5 h-1.5 rounded-full bg-[#d97706] shrink-0 opacity-80"></span>{{ $t('hero_perk_platforms') }}
               </div>
             </div>
 
             <!-- 手机端不支持提示 Banner -->
             <div class="block sm:hidden mb-3">
               <div class="flex items-center gap-3 bg-[rgba(234,179,8,.08)] border border-[rgba(234,179,8,.35)] text-[#92400e] rounded-xl px-4 py-3 leading-[1.6] text-left">
-                <span class="text-[.84rem]">⚠️ 网站专为<strong>键盘输入</strong>设计，手机体验不佳。手机用户建议扫描页面中的<strong>小程序二维码</strong>使用。</span>
+                <span class="text-[.84rem]">{{ $t('mobile_not_optimized') }}</span>
               </div>
             </div>
 
              <div class="mini-qr-card w-full box-border mb-3 flex sm:hidden">
-              <NuxtImg src="/imgs/mini.png" alt="微信小程序二维码" class="w-24 h-24 rounded-xl shrink-0 border border-[var(--hw-border)]" />
+              <NuxtImg src="/imgs/mini.png" :alt="$t('mini_program')" class="w-24 h-24 rounded-xl shrink-0 border border-[var(--hw-border)]" />
               <div class="flex flex-col gap-0.5 flex-1 min-w-0">
-                <div class="text-lg font-semibold text-[var(--hw-text)]">微信小程序</div>
-                <div class="text-sm text-[var(--hw-text-3)] leading-[1.5]">手机用户扫码体验完整功能，随时随地学英语</div>
+                <div class="text-lg font-semibold text-[var(--hw-text)]">{{ $t('mini_program') }}</div>
+                <div class="text-sm text-[var(--hw-text-3)] leading-[1.5]">{{ $t('mini_program_desc') }}</div>
               </div>
             </div>
 
@@ -435,7 +448,7 @@ let mobileMenuOpen = $ref(false)
                 @click="navigateTo('/words')"
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" class="shrink-0"><polyline points="13 17 18 12 13 7"/><polyline points="6 17 11 12 6 7"/></svg>
-                立即开始练习
+                {{ $t('hero_cta_start') }}
               </button>
               <a
                 class="inline-flex items-center justify-center gap-2 px-7 h-12 rounded-xl font-semibold text-[.97rem] text-[var(--hw-text)] bg-transparent border border-solid border-[var(--hw-border)] no-underline hover:bg-[rgba(124,58,237,.06)] hover:border-[#7c3aed] hover:text-[#7c3aed] transition-all duration-200 sm:w-auto"
@@ -443,7 +456,7 @@ let mobileMenuOpen = $ref(false)
                 target="_blank"
               >
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="currentColor" class="shrink-0"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.42 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.603-3.369-1.342-3.369-1.342-.454-1.155-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836c.85.004 1.705.114 2.504.336 1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.579.688.481C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/></svg>
-                查看源码
+                {{ $t('hero_cta_github') }}
               </a>
             </div>
 
@@ -480,7 +493,7 @@ let mobileMenuOpen = $ref(false)
                     <rect x="2" y="4" width="20" height="16" rx="2"/>
                     <path d="M8 8h.01M12 8h.01M16 8h.01M8 12h.01M12 12h.01M16 12h.01M8 16h4"/>
                   </svg>
-                  <span>点击卡片，开始打字体验</span>
+                  <span>{{ $t('demo_click_guide') }}</span>
                 </div>
                 <div class="demo-bounce-arrow">
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
@@ -507,14 +520,14 @@ let mobileMenuOpen = $ref(false)
                   <span class="w-3 h-3 rounded-full bg-[#ff5f57]"></span>
                   <span class="w-3 h-3 rounded-full bg-[#febc2e]"></span>
                   <span class="w-3 h-3 rounded-full bg-[#28c840]"></span>
-                  <span class="ml-3 text-[.78rem] text-[var(--hw-text-3)] font-mono">TypeWords — 单词练习</span>
+                  <span class="ml-3 text-[.78rem] text-[var(--hw-text-3)] font-mono">TypeWords — {{ $t('nav_words') }}</span>
                   <div class="ml-auto">
                     <span
                       class="text-[.68rem] px-2 py-0.5 rounded-full font-semibold transition-all duration-200"
                       :class="demoFocused
                         ? 'bg-[rgba(16,185,129,.12)] text-[#059669]'
                         : 'bg-[rgba(124,58,237,.08)] text-[#7c3aed]'"
-                    >{{ demoFocused ? '● 输入中' : '○ 点击激活' }}</span>
+                    >{{ demoFocused ? '● ' + $t('demo_typing_status') : '○ ' + $t('demo_click_to_activate') }}</span>
                   </div>
                 </div>
 
@@ -538,7 +551,7 @@ let mobileMenuOpen = $ref(false)
                   <div class="text-[.9rem] text-[var(--hw-text-2)] mt-1">{{ demoWord.trans }}</div>
                   <!-- 例句 -->
                   <div class="w-full mt-3 border-t border-[var(--hw-border)] pt-3 flex flex-col gap-1.5">
-                    <div class="text-[.72rem] font-bold tracking-[.06em] uppercase text-[var(--hw-text-3)]">例句</div>
+                    <div class="text-[.72rem] font-bold tracking-[.06em] uppercase text-[var(--hw-text-3)]">{{ $t('demo_example_label') }}</div>
                     <div v-for="(ex, ei) in demoWord.examples" :key="ei" class="text-[.82rem] leading-[1.6] flex flex-col gap-0.5">
                       <div class="italic text-[var(--hw-text-2)]">
                         <span class="text-[#7c3aed] font-bold not-italic mr-1">{{ ei + 1 }}.</span>{{ ex.en }}
@@ -549,12 +562,12 @@ let mobileMenuOpen = $ref(false)
                   <!-- 完成提示 / 状态文字 -->
                   <div class="h-12 flex justify-end flex-col">
                     <div v-if="demoDone" class="mt-3 flex flex-col items-center gap-1">
-                      <div class="text-[1.1rem] text-[#16a34a] font-bold">✓ 完成！</div>
+                      <div class="text-[1.1rem] text-[#16a34a] font-bold">{{ $t('demo_done') }}</div>
                       <div class="text-sm text-blue-5">
-                        按 <kbd class="inline-flex items-center justify-center px-1.5 h-5 bg-[var(--hw-bg)] border border-[var(--hw-border)] rounded text-[.72rem] font-mono">Space</kbd> 切换下一个
+                        {{ $t('demo_press_space_next') }}
                       </div>
                     </div>
-                    <div v-else-if="demoFocused" class="mt-3 text-sm text-[var(--hw-text-3)]">按下键盘，逐字输入单词，输错会标红</div>
+                    <div v-else-if="demoFocused" class="mt-3 text-sm text-[var(--hw-text-3)]">{{ $t('demo_typing_hint') }}</div>
                   </div>
                   <!-- 进度点 -->
                   <div class="flex gap-1.5 mt-2">
@@ -571,10 +584,10 @@ let mobileMenuOpen = $ref(false)
 
             <!-- ── 小程序码 — 独立卡片（不再混入 CTA 按钮旁） ── -->
             <div class="mini-qr-card w-full box-border flex">
-              <NuxtImg src="/imgs/mini.png" alt="微信小程序二维码" class="w-24 h-24 rounded-xl shrink-0 border border-[var(--hw-border)]" />
+              <NuxtImg src="/imgs/mini.png" :alt="$t('mini_program')" class="w-24 h-24 rounded-xl shrink-0 border border-[var(--hw-border)]" />
               <div class="flex flex-col gap-0.5 flex-1 min-w-0">
-                <div class="text-lg font-semibold text-[var(--hw-text)]">微信小程序</div>
-                <div class="text-sm text-[var(--hw-text-3)] leading-[1.5]">手机用户扫码体验完整功能，随时随地学英语</div>
+                <div class="text-lg font-semibold text-[var(--hw-text)]">{{ $t('mini_program') }}</div>
+                <div class="text-sm text-[var(--hw-text-3)] leading-[1.5]">{{ $t('mini_program_desc') }}</div>
               </div>
             </div>
           </div>
@@ -587,66 +600,66 @@ let mobileMenuOpen = $ref(false)
           <!-- Words practice -->
           <div class="grid grid-cols-1 md:grid-cols-[2fr_3fr] gap-10 md:gap-16 items-center">
             <div>
-              <div class="section-label mb-4">单词练习</div>
-              <h2 class="text-[clamp(1.4rem,3vw,1.8rem)] font-bold mb-3 text-[var(--hw-text)]">科学分阶，让记忆更持久</h2>
+              <div class="section-label mb-4">{{ $t('showcase_word_section_label') }}</div>
+              <h2 class="text-[clamp(1.4rem,3vw,1.8rem)] font-bold mb-3 text-[var(--hw-text)]">{{ $t('showcase_word_title') }}</h2>
               <p class="text-[var(--hw-text-2)] text-[1rem] leading-[1.75] mb-6">
-                跟写 → 听写 → 默写，三重递进式练习。FSRS 间隔复习算法自动安排复习时机，不再靠死记硬背。
+                {{ $t('showcase_word_desc') }}
               </p>
               <ul class="list-none p-0 m-0 mb-7 flex flex-col gap-2.5">
                 <li class="flex items-start gap-2 text-[.95rem] text-[var(--hw-text-2)] leading-[1.6]">
-                  <span class="text-[#7c3aed] font-bold shrink-0 mt-[.05rem]">✓</span> 7 种练习模式：跟写 / 听写 / 自测 / 默写 / 随机复习…
+                  <span class="text-[#7c3aed] font-bold shrink-0 mt-[.05rem]">✓</span> {{ $t('showcase_word_feat1') }}
                 </li>
                 <li class="flex items-start gap-2 text-[.95rem] text-[var(--hw-text-2)] leading-[1.6]">
-                  <span class="text-[#7c3aed] font-bold shrink-0 mt-[.05rem]">✓</span> FSRS 智能调度，复习词自动浮出
+                  <span class="text-[#7c3aed] font-bold shrink-0 mt-[.05rem]">✓</span> {{ $t('showcase_word_feat2') }}
                 </li>
                 <li class="flex items-start gap-2 text-[.95rem] text-[var(--hw-text-2)] leading-[1.6]">
-                  <span class="text-[#7c3aed] font-bold shrink-0 mt-[.05rem]">✓</span> 错词自动进入循环，打乱重练
+                  <span class="text-[#7c3aed] font-bold shrink-0 mt-[.05rem]">✓</span> {{ $t('showcase_word_feat3') }}
                 </li>
                 <li class="flex items-start gap-2 text-[.95rem] text-[var(--hw-text-2)] leading-[1.6]">
-                  <span class="text-[#7c3aed] font-bold shrink-0 mt-[.05rem]">✓</span> Tab 跳过 / ` 标已掌握 / Ctrl+R 随机默写
+                  <span class="text-[#7c3aed] font-bold shrink-0 mt-[.05rem]">✓</span> {{ $t('showcase_word_feat4') }}
                 </li>
               </ul>
               <button
                 class="inline-flex items-center justify-center px-5 h-10 rounded-lg font-semibold text-[.9rem] text-[var(--hw-text)] bg-transparent border border-solid border-[var(--hw-border)] cursor-pointer hover:border-[#7c3aed] hover:text-[#7c3aed] hover:bg-[rgba(124,58,237,.06)] transition-all duration-150"
                 @click="navigateTo('/words')"
               >
-                去练单词 →
+                {{ $t('showcase_word_cta') }}
               </button>
             </div>
             <div class="rounded-2xl overflow-hidden shadow-[var(--hw-shadow-lg)] border border-[var(--hw-border)] md:order-last order-first">
-              <NuxtImg src="/imgs/words.png" class="w-full block" alt="单词练习截图" />
+              <NuxtImg src="/imgs/words.png" class="w-full block" :alt="$t('showcase_word_section_label')" />
             </div>
           </div>
           <!-- Article practice -->
           <div class="grid grid-cols-1 md:grid-cols-[3fr_2fr] gap-10 md:gap-16 items-center">
             <div class="rounded-2xl overflow-hidden shadow-[var(--hw-shadow-lg)] border border-[var(--hw-border)]">
-              <NuxtImg src="/imgs/articles.png" class="w-full block" alt="文章练习截图" />
+              <NuxtImg src="/imgs/articles.png" class="w-full block" :alt="$t('showcase_article_section_label')" />
             </div>
             <div>
-              <div class="section-label mb-4">文章练习</div>
-              <h2 class="text-[clamp(1.4rem,3vw,1.8rem)] font-bold mb-3 text-[var(--hw-text)]">沉浸式阅读，强化语感</h2>
+              <div class="section-label mb-4">{{ $t('showcase_article_section_label') }}</div>
+              <h2 class="text-[clamp(1.4rem,3vw,1.8rem)] font-bold mb-3 text-[var(--hw-text)]">{{ $t('showcase_article_title') }}</h2>
               <p class="text-[var(--hw-text-2)] text-[1rem] leading-[1.75] mb-6">
-                内置常见书籍，也可自由添加文章。跟打 + 默写双模式，支持边听边打，强化输出记忆。
+                {{ $t('showcase_article_desc') }}
               </p>
               <ul class="list-none p-0 m-0 mb-7 flex flex-col gap-2.5">
                 <li class="flex items-start gap-2 text-[.95rem] text-[var(--hw-text-2)] leading-[1.6]">
-                  <span class="text-[#7c3aed] font-bold shrink-0 mt-[.05rem]">✓</span> 内置 NCE、常见名著等书籍
+                  <span class="text-[#7c3aed] font-bold shrink-0 mt-[.05rem]">✓</span> {{ $t('showcase_article_feat1') }}
                 </li>
                 <li class="flex items-start gap-2 text-[.95rem] text-[var(--hw-text-2)] leading-[1.6]">
-                  <span class="text-[#7c3aed] font-bold shrink-0 mt-[.05rem]">✓</span> 跟打 + 默写双模式
+                  <span class="text-[#7c3aed] font-bold shrink-0 mt-[.05rem]">✓</span> {{ $t('showcase_article_feat2') }}
                 </li>
                 <li class="flex items-start gap-2 text-[.95rem] text-[var(--hw-text-2)] leading-[1.6]">
-                  <span class="text-[#7c3aed] font-bold shrink-0 mt-[.05rem]">✓</span> 支持边听音频边默写
+                  <span class="text-[#7c3aed] font-bold shrink-0 mt-[.05rem]">✓</span> {{ $t('showcase_article_feat3') }}
                 </li>
                 <li class="flex items-start gap-2 text-[.95rem] text-[var(--hw-text-2)] leading-[1.6]">
-                  <span class="text-[#7c3aed] font-bold shrink-0 mt-[.05rem]">✓</span> 可自定义添加任意文章
+                  <span class="text-[#7c3aed] font-bold shrink-0 mt-[.05rem]">✓</span> {{ $t('showcase_article_feat4') }}
                 </li>
               </ul>
               <button
                 class="inline-flex items-center justify-center px-5 h-10 rounded-lg font-semibold text-[.9rem] text-[var(--hw-text)] bg-transparent border border-solid border-[var(--hw-border)] cursor-pointer hover:border-[#7c3aed] hover:text-[#7c3aed] hover:bg-[rgba(124,58,237,.06)] transition-all duration-150"
                 @click="navigateTo('/articles')"
               >
-                去练文章 →
+                {{ $t('showcase_article_cta') }}
               </button>
             </div>
           </div>
@@ -669,40 +682,40 @@ let mobileMenuOpen = $ref(false)
       <section class="py-20 px-4 sm:px-8">
         <div class="max-w-[1100px] mx-auto">
           <div class="text-center mb-12">
-            <div class="section-label">核心特性</div>
-            <h2 class="section-h2">一切，都是为了让你真正记住</h2>
-            <p class="section-desc">TypeWords 不是又一个单词 App，而是一套以「打字输入」为核心的英语记忆系统。</p>
+            <div class="section-label">{{ $t('feature_grid_section_label') }}</div>
+            <h2 class="section-h2">{{ $t('feature_grid_title') }}</h2>
+            <p class="section-desc">{{ $t('feature_grid_desc') }}</p>
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
             <div class="feature-card">
               <span class="text-[2rem] mb-3.5 block">🧠</span>
-              <div class="text-[1rem] font-bold text-[var(--hw-text)] mb-2">FSRS 智能复习</div>
-              <div class="text-[.9rem] text-[var(--hw-text-2)] leading-[1.7]">基于科学间隔重复算法自动调度复习词，好不好记它帮你决定，效率最大化。</div>
+              <div class="text-[1rem] font-bold text-[var(--hw-text)] mb-2">{{ $t('feature_fsrs_title') }}</div>
+              <div class="text-[.9rem] text-[var(--hw-text-2)] leading-[1.7]">{{ $t('feature_fsrs_desc') }}</div>
             </div>
             <div class="feature-card">
               <span class="text-[2rem] mb-3.5 block">📚</span>
-              <div class="text-[1rem] font-bold text-[var(--hw-text)] mb-2">海量内置词库</div>
-              <div class="text-[.9rem] text-[var(--hw-text-2)] leading-[1.7]">从小学到 GRE/GMAT/SAT/IELTS，内置数十套词典，一键切换，开箱即用。</div>
+              <div class="text-[1rem] font-bold text-[var(--hw-text)] mb-2">{{ $t('feature_vocab_title') }}</div>
+              <div class="text-[.9rem] text-[var(--hw-text-2)] leading-[1.7]">{{ $t('feature_vocab_desc') }}</div>
             </div>
             <div class="feature-card">
               <span class="text-[2rem] mb-3.5 block">⌨️</span>
-              <div class="text-[1rem] font-bold text-[var(--hw-text)] mb-2">7 种练习模式</div>
-              <div class="text-[.9rem] text-[var(--hw-text-2)] leading-[1.7]">跟写、听写、自测、默写、随机复习等模式自由组合，打字输入强化肌肉记忆。</div>
+              <div class="text-[1rem] font-bold text-[var(--hw-text)] mb-2">{{ $t('feature_modes_title') }}</div>
+              <div class="text-[.9rem] text-[var(--hw-text-2)] leading-[1.7]">{{ $t('feature_modes_desc') }}</div>
             </div>
             <div class="feature-card">
               <span class="text-[2rem] mb-3.5 block">🆓</span>
-              <div class="text-[1rem] font-bold text-[var(--hw-text)] mb-2">完全免费开源</div>
-              <div class="text-[.9rem] text-[var(--hw-text-2)] leading-[1.7]">100% 开源可审查，完全免费使用，支持私有部署，没有任何隐藏收费。</div>
+              <div class="text-[1rem] font-bold text-[var(--hw-text)] mb-2">{{ $t('feature_free_title') }}</div>
+              <div class="text-[.9rem] text-[var(--hw-text-2)] leading-[1.7]">{{ $t('feature_free_desc') }}</div>
             </div>
             <div class="feature-card">
               <span class="text-[2rem] mb-3.5 block">⚙️</span>
-              <div class="text-[1rem] font-bold text-[var(--hw-text)] mb-2">高度自定义</div>
-              <div class="text-[.9rem] text-[var(--hw-text-2)] leading-[1.7]">自定义词典与文章、快捷键、键盘音效、每日学习数量，打造专属学习计划。</div>
+              <div class="text-[1rem] font-bold text-[var(--hw-text)] mb-2">{{ $t('feature_custom_title') }}</div>
+              <div class="text-[.9rem] text-[var(--hw-text-2)] leading-[1.7]">{{ $t('feature_custom_desc') }}</div>
             </div>
             <div class="feature-card">
               <span class="text-[2rem] mb-3.5 block">☁️</span>
-              <div class="text-[1rem] font-bold text-[var(--hw-text)] mb-2">数据本地优先</div>
-              <div class="text-[.9rem] text-[var(--hw-text-2)] leading-[1.7]">数据默认存本地，离线可用。可配置自己的 Supabase 实现跨设备云端同步。</div>
+              <div class="text-[1rem] font-bold text-[var(--hw-text)] mb-2">{{ $t('feature_local_title') }}</div>
+              <div class="text-[.9rem] text-[var(--hw-text-2)] leading-[1.7]">{{ $t('feature_local_desc') }}</div>
             </div>
           </div>
         </div>
@@ -712,43 +725,43 @@ let mobileMenuOpen = $ref(false)
       <section class="py-20 px-4 sm:px-8 bg-[var(--hw-bg-card)] border-t border-b border-[var(--hw-border)]">
         <div class="max-w-[900px] mx-auto">
           <div class="text-center mb-12">
-            <div class="section-label">快捷键</div>
-            <h2 class="section-h2">为键盘流玩家设计</h2>
-            <p class="section-desc">全程键盘操作，不需要鼠标，专注练习不分心。</p>
+            <div class="section-label">{{ $t('shortcut_section_label') }}</div>
+            <h2 class="section-h2">{{ $t('shortcut_section_title') }}</h2>
+            <p class="section-desc">{{ $t('shortcut_section_desc') }}</p>
           </div>
           <div class="grid grid-cols-2 sm:grid-cols-3 gap-4 mb-6">
             <div class="shortcut-item">
               <div class="flex items-center gap-1.5 flex-wrap"><kbd class="kbd-key">Tab</kbd></div>
-              <div class="text-[.88rem] text-[var(--hw-text-2)]">跳过当前单词</div>
+              <div class="text-[.88rem] text-[var(--hw-text-2)]">{{ $t('shortcut_skip_word') }}</div>
             </div>
             <div class="shortcut-item">
               <div class="flex items-center gap-1.5 flex-wrap"><kbd class="kbd-key">Esc</kbd></div>
-              <div class="text-[.88rem] text-[var(--hw-text-2)]">显示当前单词</div>
+              <div class="text-[.88rem] text-[var(--hw-text-2)]">{{ $t('shortcut_show_word_key') }}</div>
             </div>
             <div class="shortcut-item">
               <div class="flex items-center gap-1.5 flex-wrap">
                 <kbd class="kbd-key">Ctrl</kbd><span class="text-[.75rem] text-[var(--hw-text-3)]">+</span><kbd class="kbd-key">R</kbd>
               </div>
-              <div class="text-[.88rem] text-[var(--hw-text-2)]">随机打乱默写</div>
+              <div class="text-[.88rem] text-[var(--hw-text-2)]">{{ $t('shortcut_random_shuffle') }}</div>
             </div>
             <div class="shortcut-item">
               <div class="flex items-center gap-1.5 flex-wrap">
                 <kbd class="kbd-key">Shift</kbd><span class="text-[.75rem] text-[var(--hw-text-3)]">+</span><kbd class="kbd-key">→</kbd>
               </div>
-              <div class="text-[.88rem] text-[var(--hw-text-2)]">跳过当前练习阶段</div>
+              <div class="text-[.88rem] text-[var(--hw-text-2)]">{{ $t('shortcut_skip_stage') }}</div>
             </div>
             <div class="shortcut-item">
               <div class="flex items-center gap-1.5 flex-wrap"><kbd class="kbd-key">`</kbd></div>
-              <div class="text-[.88rem] text-[var(--hw-text-2)]">标记 / 取消已掌握</div>
+              <div class="text-[.88rem] text-[var(--hw-text-2)]">{{ $t('shortcut_toggle_mastered') }}</div>
             </div>
             <div class="shortcut-item">
               <div class="flex items-center gap-1.5 flex-wrap">
                 <kbd class="kbd-key">Ctrl</kbd><span class="text-[.75rem] text-[var(--hw-text-3)]">+</span><kbd class="kbd-key">P</kbd>
               </div>
-              <div class="text-[.88rem] text-[var(--hw-text-2)]">播放单词发音</div>
+              <div class="text-[.88rem] text-[var(--hw-text-2)]">{{ $t('shortcut_play_pronunciation') }}</div>
             </div>
           </div>
-          <p class="text-center text-[.85rem] text-[var(--hw-text-3)] m-0">所有快捷键均可在设置中自定义。</p>
+          <p class="text-center text-[.85rem] text-[var(--hw-text-3)] m-0">{{ $t('shortcut_custom_hint') }}</p>
         </div>
       </section>
 
@@ -756,9 +769,9 @@ let mobileMenuOpen = $ref(false)
       <section class="py-20 px-4 sm:px-8">
         <div class="max-w-[1100px] mx-auto">
           <div class="text-center mb-12">
-            <div class="section-label">备受认可</div>
-            <h2 class="section-h2">开源社区与用户的选择</h2>
-            <p class="section-desc">获得全球开发者持续关注，成为越来越多英语学习者的首选工具</p>
+            <div class="section-label">{{ $t('honors_section_label') }}</div>
+            <h2 class="section-h2">{{ $t('honors_section_title') }}</h2>
+            <p class="section-desc">{{ $t('honors_section_desc') }}</p>
           </div>
           <div class="grid grid-cols-2 md:grid-cols-4 gap-5 mb-10">
             <div
@@ -773,13 +786,13 @@ let mobileMenuOpen = $ref(false)
             </div>
           </div>
           <div class="text-center">
-            <div class="text-[.78rem] font-semibold tracking-[.06em] uppercase text-[var(--hw-text-3)] mb-4">曾获推荐 / 上榜</div>
+            <div class="text-[.78rem] font-semibold tracking-[.06em] uppercase text-[var(--hw-text-3)] mb-4">{{ $t('recommended_by') }}</div>
             <div class="flex gap-3 justify-center flex-wrap">
-              <span class="inline-flex items-center gap-1.5 text-[.85rem] font-semibold text-[var(--hw-text-2)] px-4 py-2 rounded-full border border-[var(--hw-border)] bg-[var(--hw-bg-card)] hover:border-[#7c3aed] hover:text-[#7c3aed] transition-colors duration-150 cursor-default"><span>🐙</span> GitHub 趋势榜</span>
-              <span class="inline-flex items-center gap-1.5 text-[.85rem] font-semibold text-[var(--hw-text-2)] px-4 py-2 rounded-full border border-[var(--hw-border)] bg-[var(--hw-bg-card)] hover:border-[#7c3aed] hover:text-[#7c3aed] transition-colors duration-150 cursor-default"><span>💬</span> V2EX 热搜</span>
-              <span class="inline-flex items-center gap-1.5 text-[.85rem] font-semibold text-[var(--hw-text-2)] px-4 py-2 rounded-full border border-[var(--hw-border)] bg-[var(--hw-bg-card)] hover:border-[#7c3aed] hover:text-[#7c3aed] transition-colors duration-150 cursor-default"><span>🏆</span> Gitee GVP</span>
-              <span class="inline-flex items-center gap-1.5 text-[.85rem] font-semibold text-[var(--hw-text-2)] px-4 py-2 rounded-full border border-[var(--hw-border)] bg-[var(--hw-bg-card)] hover:border-[#7c3aed] hover:text-[#7c3aed] transition-colors duration-150 cursor-default"><span>📰</span> 少数派推荐</span>
-              <span class="inline-flex items-center gap-1.5 text-[.85rem] font-semibold text-[var(--hw-text-2)] px-4 py-2 rounded-full border border-[var(--hw-border)] bg-[var(--hw-bg-card)] hover:border-[#7c3aed] hover:text-[#7c3aed] transition-colors duration-150 cursor-default"><span>⭐</span> GitCode G-Star</span>
+              <span class="inline-flex items-center gap-1.5 text-[.85rem] font-semibold text-[var(--hw-text-2)] px-4 py-2 rounded-full border border-[var(--hw-border)] bg-[var(--hw-bg-card)] hover:border-[#7c3aed] hover:text-[#7c3aed] transition-colors duration-150 cursor-default"><span>🐙</span> {{ $t('github_trending') }}</span>
+              <span class="inline-flex items-center gap-1.5 text-[.85rem] font-semibold text-[var(--hw-text-2)] px-4 py-2 rounded-full border border-[var(--hw-border)] bg-[var(--hw-bg-card)] hover:border-[#7c3aed] hover:text-[#7c3aed] transition-colors duration-150 cursor-default"><span>💬</span> {{ $t('v2ex_hot') }}</span>
+              <span class="inline-flex items-center gap-1.5 text-[.85rem] font-semibold text-[var(--hw-text-2)] px-4 py-2 rounded-full border border-[var(--hw-border)] bg-[var(--hw-bg-card)] hover:border-[#7c3aed] hover:text-[#7c3aed] transition-colors duration-150 cursor-default"><span>🏆</span> {{ $t('gitee_gvp') }}</span>
+              <span class="inline-flex items-center gap-1.5 text-[.85rem] font-semibold text-[var(--hw-text-2)] px-4 py-2 rounded-full border border-[var(--hw-border)] bg-[var(--hw-bg-card)] hover:border-[#7c3aed] hover:text-[#7c3aed] transition-colors duration-150 cursor-default"><span>📰</span> {{ $t('sspai_recommended') }}</span>
+              <span class="inline-flex items-center gap-1.5 text-[.85rem] font-semibold text-[var(--hw-text-2)] px-4 py-2 rounded-full border border-[var(--hw-border)] bg-[var(--hw-bg-card)] hover:border-[#7c3aed] hover:text-[#7c3aed] transition-colors duration-150 cursor-default"><span>⭐</span> {{ $t('gitcode_gstar') }}</span>
             </div>
           </div>
         </div>
@@ -788,20 +801,20 @@ let mobileMenuOpen = $ref(false)
       <!-- ══════════════════ CTA ══════════════════ -->
       <section class="py-20 px-4 sm:px-8 text-center bg-[var(--hw-bg-card)] border-t border-[var(--hw-border)]">
         <div class="max-w-[600px] mx-auto">
-          <h2 class="text-[clamp(1.6rem,4vw,2.2rem)] font-black text-[var(--hw-text)] mb-3">现在开始，敲出你的英语能力</h2>
-          <p class="text-[var(--hw-text-2)] text-[1rem] mb-8">免费、开源、无需注册，打开即用。</p>
+          <h2 class="text-[clamp(1.6rem,4vw,2.2rem)] font-black text-[var(--hw-text)] mb-3">{{ $t('cta_section_title') }}</h2>
+          <p class="text-[var(--hw-text-2)] text-[1rem] mb-8">{{ $t('cta_section_desc') }}</p>
           <div class="flex gap-3 justify-center flex-wrap flex-col sm:flex-row items-stretch sm:items-center">
             <button
               class="inline-flex items-center justify-center px-8 h-12 rounded-lg font-semibold text-[1rem] text-white bg-gradient-to-r from-[#7c3aed] to-[#2563eb] border-none shadow-[0_4px_16px_rgba(124,58,237,.28)] cursor-pointer hover:-translate-y-px hover:opacity-90 transition-all duration-150 sm:w-auto"
               @click="navigateTo('/words')"
             >
-              开始单词练习
+              {{ $t('cta_start_word') }}
             </button>
             <a
               class="inline-flex items-center justify-center px-8 h-12 rounded-lg font-semibold text-[1rem] text-[var(--hw-text)] bg-transparent border border-solid border-[var(--hw-border)] no-underline hover:bg-[rgba(124,58,237,.06)] hover:border-[#7c3aed] hover:text-[#7c3aed] transition-all duration-150 sm:w-auto"
               :href="GITHUB"
               target="_blank"
-            >查看源码 →</a>
+            >{{ $t('cta_github') }}</a>
           </div>
         </div>
       </section>
@@ -810,8 +823,8 @@ let mobileMenuOpen = $ref(false)
       <section class="py-20 px-4 sm:px-8">
         <div class="max-w-[720px] mx-auto">
           <div class="text-center mb-12">
-            <div class="section-label">常见问题</div>
-            <h2 class="section-h2">你可能想知道的</h2>
+            <div class="section-label">{{ $t('faq_section_label') }}</div>
+            <h2 class="section-h2">{{ $t('faq_section_title') }}</h2>
           </div>
           <div class="flex flex-col gap-3">
             <div
@@ -845,27 +858,30 @@ let mobileMenuOpen = $ref(false)
         <!-- Brand -->
         <div class="max-w-[280px]">
           <span class="text-[1.1rem] font-semibold bg-gradient-to-r from-[#bd34fe] to-[#41d1ff] bg-clip-text text-transparent [-webkit-background-clip:text] [-webkit-text-fill-color:transparent] block mb-2">{{ APP_NAME }}</span>
-          <p class="text-[.88rem] text-[var(--hw-text-3)] mb-5 leading-[1.6]">打字练英语，一次敲击，一点进步。</p>
+          <p class="text-[.88rem] text-[var(--hw-text-3)] mb-5 leading-[1.6]">{{ $t('footer_tagline') }}</p>
           <ChannelIcons type="horizontal" :share="false" />
         </div>
         <!-- Nav columns -->
         <div class="flex gap-12 flex-wrap">
           <div class="flex flex-col gap-2.5">
-            <div class="text-[.8rem] font-bold tracking-[.06em] uppercase text-[var(--hw-text-3)] mb-1">功能</div>
-            <NuxtLink to="/words" class="footer-link">单词练习</NuxtLink>
-            <NuxtLink to="/articles" class="footer-link">文章练习</NuxtLink>
-            <NuxtLink to="/fsrs" class="footer-link">FSRS 数据</NuxtLink>
+            <div class="text-[.8rem] font-bold tracking-[.06em] uppercase text-[var(--hw-text-3)] mb-1">{{ $t('footer_col_features') }}</div>
+            <NuxtLink to="/words" class="footer-link">{{ $t('footer_word_practice') }}</NuxtLink>
+            <NuxtLink to="/articles" class="footer-link">{{ $t('footer_article_practice') }}</NuxtLink>
+            <NuxtLink to="/fsrs" class="footer-link">{{ $t('footer_fsrs_data') }}</NuxtLink>
           </div>
           <div class="flex flex-col gap-2.5">
-            <div class="text-[.8rem] font-bold tracking-[.06em] uppercase text-[var(--hw-text-3)] mb-1">支持</div>
-            <NuxtLink to="/help" class="footer-link">帮助文档</NuxtLink>
-            <NuxtLink to="/feedback" class="footer-link">反馈问题</NuxtLink>
-            <NuxtLink to="/doc" class="footer-link">学习资料</NuxtLink>
+            <div class="text-[.8rem] font-bold tracking-[.06em] uppercase text-[var(--hw-text-3)] mb-1">{{ $t('footer_col_support') }}</div>
+            <NuxtLink to="/help" class="footer-link">{{ $t('footer_help') }}</NuxtLink>
+            <NuxtLink to="/feedback" class="footer-link">{{ $t('footer_feedback') }}</NuxtLink>
+            <NuxtLink to="/doc" class="footer-link">{{ $t('footer_resources') }}</NuxtLink>
+            <a href="/privacy-policy.html" class="footer-link">{{ $t('footer_privacy') }}</a>
+            <a href="/user-agreement.html" class="footer-link">{{ $t('footer_agreement') }}</a>
           </div>
           <div class="flex flex-col gap-2.5">
-            <div class="text-[.8rem] font-bold tracking-[.06em] uppercase text-[var(--hw-text-3)] mb-1">项目</div>
+            <div class="text-[.8rem] font-bold tracking-[.06em] uppercase text-[var(--hw-text-3)] mb-1">{{ $t('footer_col_project') }}</div>
             <a :href="GITHUB" target="_blank" class="footer-link">GitHub</a>
-            <NuxtLink to="/setting" class="footer-link">设置</NuxtLink>
+            <NuxtLink to="/about" class="footer-link">{{ $t('footer_about') }}</NuxtLink>
+            <NuxtLink to="/setting" class="footer-link">{{ $t('setting') }}</NuxtLink>
           </div>
         </div>
       </div>
@@ -876,13 +892,14 @@ let mobileMenuOpen = $ref(false)
             href="https://beian.mps.gov.cn/#/query/webSearch?code=51015602001426"
             target="_blank"
             class="text-[.8rem] text-[var(--hw-text-3)] no-underline hover:text-[var(--hw-text-2)] transition-colors duration-150"
-          >川公网安备51015602001426号</a>
+          >{{ $t('cn_limit_no1') }}</a>
           <a
             href="https://beian.miit.gov.cn/"
             class="text-[.8rem] text-[var(--hw-text-3)] no-underline hover:text-[var(--hw-text-2)] transition-colors duration-150"
             target="_blank"
-          >蜀ICP备2025157466号-2</a>
+          >{{ $t('cn_limit_no2') }}</a>
         </template>
+        <a href="mailto:zyronon@163.com" class="text-[.8rem] text-[var(--hw-text-3)] no-underline hover:text-[var(--hw-text-2)] transition-colors duration-150">{{ $t('contact_us') }}zyronon@163.com</a>
         <span class="text-[.8rem] text-[var(--hw-text-3)] ml-auto">© 2026 {{ APP_NAME }}. All rights reserved.</span>
       </div>
     </footer>
