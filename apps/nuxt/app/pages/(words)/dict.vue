@@ -22,11 +22,13 @@ import PracticeSettingDialog from '@typewords/core/components/word/PracticeSetti
 import { useBaseStore } from '@typewords/core/stores/base.ts'
 import { useRuntimeStore } from '@typewords/core/stores/runtime.ts'
 import { useSettingStore } from '@typewords/core/stores/setting.ts'
+import type { Dict } from '@typewords/core/types/types.ts'
 import { getDefaultDict, getDefaultWord } from '@typewords/core/types/func.ts'
 import {
   _getDictDataByUrl,
   _nextTick,
   convertToWord,
+  ensureCustomDictCopy,
   isMobile,
   loadJsLib,
   resourceWrap,
@@ -35,7 +37,6 @@ import {
   useNav,
 } from '@typewords/core/utils'
 import { MessageBox } from '@typewords/core/utils/MessageBox.tsx'
-import { nanoid } from 'nanoid'
 import { computed, onMounted, reactive, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { useI18n } from 'vue-i18n'
@@ -84,18 +85,13 @@ let studyLoading = $ref(false)
 
 function syncDictInMyStudyList(study = false) {
   _nextTick(() => {
-    //这里不能移，一定要先找到对应的词典，再去改id。不然先改id，就找不到对应的词典了
-    let rIndex = base.word.bookList.findIndex(v => v.id === runtimeStore.editDict.id)
+    const originalId = runtimeStore.editDict.id
 
     runtimeStore.editDict.words = allList
-    let temp = runtimeStore.editDict
-    if (!temp.custom && ![DictId.wordKnown, DictId.wordWrong, DictId.wordCollect].includes(temp.id)) {
-      temp.custom = true
-      if (!temp.id.includes('_custom')) {
-        temp.id += '_custom_' + nanoid(6)
-      }
-    }
+    let temp = ensureCustomDictCopy(runtimeStore.editDict)
+    let rIndex = base.word.bookList.findIndex(v => v.id === originalId)
     temp.length = temp.words.length
+    runtimeStore.editDict = temp
     if (rIndex > -1) {
       base.word.bookList[rIndex] = getDefaultDict(temp)
       if (study) base.word.studyIndex = rIndex
@@ -242,10 +238,19 @@ function closeWordForm() {
 let isEdit = $ref(false)
 let isAdd = $ref(false)
 let activeTab = $ref<'list' | 'edit'>('list') // 移动端标签页状态
+let _copyData: Dict | null = null // createCopy 生成的副本数据，作为 initialData 传给 EditBook
 
 const showBookDetail = computed(() => {
   return !(isAdd || isEdit)
 })
+
+function createCopy() {
+  // 生成副本数据，不写入 store。经由 initialData 传给 EditBook，确认后才写入
+  const copy = ensureCustomDictCopy(runtimeStore.editDict)
+  copy.name = runtimeStore.editDict.name + ' (副本)'
+  _copyData = copy
+  isAdd = true
+}
 
 onMounted(async () => {
   if (route.query?.isAdd) {
@@ -258,9 +263,7 @@ onMounted(async () => {
       if (
         !runtimeStore.editDict.words.length &&
         !runtimeStore.editDict.custom &&
-        ![DictId.wordCollect, DictId.wordWrong, DictId.wordKnown].includes(
-          runtimeStore.editDict.enName || runtimeStore.editDict.id
-        )
+        !runtimeStore.editDict.system
       ) {
         loading = true
         let dictList = await fetch(resourceWrap(DICT_LIST.WORD.ALL)).then(r => r.json())
@@ -303,8 +306,20 @@ async function getDetail(id) {
 }
 
 function formClose() {
-  if (isEdit) isEdit = false
-  else router.back()
+  if (isEdit) {
+    isEdit = false
+    } else if (isAdd) {
+      _copyData = null
+      isAdd = false
+  } else {
+    router.back()
+  }
+}
+
+function handleSubmit() {
+  _copyData = null
+  isEdit = false
+  isAdd = false
 }
 
 let showPracticeSettingDialog = $ref(false)
@@ -649,7 +664,7 @@ function getLocalList({ pageNo, pageSize, searchKey }) {
 }
 
 async function requestList({ pageNo, pageSize, searchKey }) {
-  if (!dict.custom && ![DictId.wordCollect, DictId.wordWrong, DictId.wordKnown].includes(dict.enName || dict.id)) {
+  if (!dict.custom && !dict.system) {
     // 非自定义词典，直接请求json
 
     //如果没数据则请求
@@ -700,6 +715,8 @@ function onSort(type: Sort, pageNo: number, pageSize: number) {
   }
 }
 
+const editable = $computed(() => runtimeStore.editDict.custom || runtimeStore.editDict.system)
+
 defineRender(() => {
   return (
     <BasePage>
@@ -709,9 +726,15 @@ defineRender(() => {
             <BackIcon class="dict-back z-2" />
             <div class="dict-title absolute page-title text-align-center w-full">{runtimeStore.editDict.name}</div>
             <div class="dict-actions flex">
-              <BaseButton loading={studyLoading || loading} type="info" onClick={() => (isEdit = true)}>
-                {$t('edit')}
-              </BaseButton>
+              {runtimeStore.editDict.custom ? (
+                <BaseButton loading={studyLoading || loading} type="info" onClick={() => (isEdit = true)}>
+                  {$t('edit')}
+                </BaseButton>
+              ) : (
+                <BaseButton loading={studyLoading || loading} type="info" onClick={createCopy}>
+                  {$t('create_copy')}
+                </BaseButton>
+              )}
               <BaseButton loading={studyLoading || loading} type="info" onClick={startTest}>
                 {$t('test')}
               </BaseButton>
@@ -758,11 +781,13 @@ defineRender(() => {
                 exportXlsxLoading={exportXlsxLoading}
                 exportJsonLoading={exportJsonLoading}
                 importLoading={importLoading}
+                readonly={!editable}
+                readonlyTip={$t('create_copy_to_edit')}
               >
                 {val => (
                   <WordItem
                     showTransPop={false}
-                    onClick={() => editWord(val.item)}
+                    onClick={() => runtimeStore.editDict.custom && editWord(val.item)}
                     index={val.index}
                     showCollectIcon={false}
                     showMarkIcon={false}
@@ -772,14 +797,29 @@ defineRender(() => {
                       prefix: () => val.checkbox(val.item),
                       suffix: () => (
                         <div class="flex flex-col">
-                          <BaseIcon class="option-icon" onClick={() => editWord(val.item)} title="编辑">
+                          <BaseIcon
+                            class="option-icon"
+                            disabled={!editable}
+                            title={runtimeStore.editDict.custom ? $t('edit') : $t('create_copy_to_edit')}
+                            onClick={() => runtimeStore.editDict.custom && editWord(val.item)}
+                          >
                             <IconFluentTextEditStyle20Regular />
                           </BaseIcon>
-                          <PopConfirm title="确认删除？" onConfirm={() => batchDel([val.item.id])}>
-                            <BaseIcon class="option-icon" title="删除">
+                          {editable ? (
+                            <PopConfirm title="确认删除？" onConfirm={() => batchDel([val.item.id])}>
+                              <BaseIcon class="option-icon" title={$t('delete')}>
+                                <DeleteIcon />
+                              </BaseIcon>
+                            </PopConfirm>
+                          ) : (
+                            <BaseIcon
+                              class="option-icon"
+                              disabled={true}
+                              title={$t('create_copy_to_edit')}
+                            >
                               <DeleteIcon />
                             </BaseIcon>
-                          </PopConfirm>
+                          )}
                         </div>
                       ),
                     }}
@@ -883,20 +923,14 @@ defineRender(() => {
           <div class="dict-header flex justify-between items-center relative">
             <BackIcon
               class="dict-back z-2"
-              onClick={() => {
-                if (isAdd) {
-                  router.back()
-                } else {
-                  isEdit = false
-                }
-              }}
+              onClick={formClose}
             />
             <div class="dict-title absolute page-title text-align-center w-full">
-              {runtimeStore.editDict.id ? $t('edit_dict') : $t('create_dict')}
+              {isAdd ? $t('create_dict') : $t('edit_dict')}
             </div>
           </div>
           <div class="center">
-            <EditBook isAdd={isAdd} isBook={false} onClose={formClose} onSubmit={() => (isEdit = isAdd = false)} />
+            <EditBook isAdd={isAdd} isBook={false} initialData={_copyData} onClose={formClose} onSubmit={handleSubmit} />
           </div>
         </div>
       )}

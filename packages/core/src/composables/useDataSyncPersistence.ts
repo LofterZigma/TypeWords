@@ -127,14 +127,14 @@ async function persistLocalState(type: SyncDataType, val: unknown, updated_at?: 
 function applyDictData(store: ReturnType<typeof useBaseStore>, data: unknown) {
   store.setState(data as any)
   if (store.word.studyIndex >= 3) {
-    if (!store.sdict.custom && !store.sdict.words.length) {
+    if (!store.sdict.custom && !store.sdict.system && !store.sdict.words.length) {
       _getDictDataByUrl(store.sdict).then(r => {
         store.word.bookList[store.word.studyIndex] = r
       })
     }
   }
   if (store.article.studyIndex >= 1) {
-    if (!store.sbook.custom && !store.sbook.articles.length) {
+    if (!store.sbook.custom && !store.sbook.system && !store.sbook.articles.length) {
       _getDictDataByUrl(store.sbook, DictType.article).then(r => {
         store.article.bookList[store.article.studyIndex] = r
       })
@@ -264,8 +264,8 @@ async function applyRemoteDataByType(
 
 function getDictSyncBlockReason(state: BaseState): string | null {
   const data = shakeCommonDict(state)
-  const bookList = data.article.bookList.filter(v => v.custom || [DictId.articleCollect].includes(v.enName))
-  const audioFileIdList: string[] = []
+const bookList = data.article.bookList.filter(v => v.custom || v.system)
+        const audioFileIdList: string[] = []
   bookList.forEach(v => {
     v.articles
       .filter(s => !s.audioSrc && s.audioFileId)
@@ -531,8 +531,8 @@ export function useDataSyncPersistence() {
     const blockReason = getDictSyncBlockReason(state)
     const audioFileIdList: string[] = []
     if (blockReason) {
-      const bookList = data.article.bookList.filter(v => v.custom || [DictId.articleCollect].includes(v.enName))
-      bookList.forEach(v => {
+        const bookList = data.article.bookList.filter(v => v.custom || v.system)
+        bookList.forEach(v => {
         v.articles
           .filter(s => !s.audioSrc && s.audioFileId)
           .forEach(a => {

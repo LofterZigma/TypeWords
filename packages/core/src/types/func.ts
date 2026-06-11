@@ -67,6 +67,8 @@ export function getDefaultDict(val: Partial<Dict> = {}): Dict {
     lastLearnIndex: 0,
     perDayStudyNumber: 20,
     custom: false,
+    system: false,
+    sourceId: '',
     complete: false,
 
     createdBy: '',

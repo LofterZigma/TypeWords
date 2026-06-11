@@ -33,6 +33,9 @@ const props = withDefaults(
     importLoading?: boolean
     request?: Function
     list?: any[]
+    /** 只读模式：禁用所有写操作，hover 时显示 readonlyTip */
+    readonly?: boolean
+    readonlyTip?: string
   }>(),
   {
     loading: true,
@@ -42,6 +45,7 @@ const props = withDefaults(
     exportXlsxLoading: false,
     exportJsonLoading: false,
     importLoading: false,
+    readonly: false,
   }
 )
 
@@ -320,37 +324,55 @@ defineRender(() => {
                   </PopConfirm>
                 ) : null}
 
-                <BaseIcon onClick={() => (showCheckbox = !showCheckbox)} title={$t('batch_delete')}>
+                <BaseIcon
+                  disabled={props.readonly}
+                  title={props.readonly ? props.readonlyTip : $t('batch_delete')}
+                  onClick={() => !props.readonly && (showCheckbox = !showCheckbox)}
+                >
                   <DeleteIcon />
                 </BaseIcon>
-                <BaseIcon onClick={() => (showImportDialog = true)} title={$t('import')}>
+                <BaseIcon
+                  disabled={props.readonly}
+                  title={props.readonly ? props.readonlyTip : $t('import')}
+                  onClick={() => !props.readonly && (showImportDialog = true)}
+                >
                   <IconSystemUiconsImport />
                 </BaseIcon>
-                <BaseOptionButton
-                  v-slots={{
-                    options: () => (
-                      <div class="flex flex-col gap-2">
-                        <BaseButton class="w-full" onClick={() => emit('exportXlsx')}>
-                          {props.exportXlsxLoading ? <IconEosIconsLoading /> : $t('export_as_xlsx')}
-                        </BaseButton>
-                        <BaseButton class="w-full" onClick={() => emit('exportJson')}>
-                          {props.exportJsonLoading ? <IconEosIconsLoading /> : $t('export_as_json')}
-                        </BaseButton>
-                      </div>
-                    ),
-                  }}
-                >
-                  <BaseIcon>
+                {props.readonly ? (
+                  <BaseIcon disabled title={props.readonlyTip}>
                     <IconPhExportLight />
                   </BaseIcon>
-                </BaseOptionButton>
-                <BaseIcon onClick={() => emit('add')} title={$t('add_word')}>
+                ) : (
+                  <BaseOptionButton
+                    v-slots={{
+                      options: () => (
+                        <div class="flex flex-col gap-2">
+                          <BaseButton class="w-full" onClick={() => emit('exportXlsx')}>
+                            {props.exportXlsxLoading ? <IconEosIconsLoading /> : $t('export_as_xlsx')}
+                          </BaseButton>
+                          <BaseButton class="w-full" onClick={() => emit('exportJson')}>
+                            {props.exportJsonLoading ? <IconEosIconsLoading /> : $t('export_as_json')}
+                          </BaseButton>
+                        </div>
+                      ),
+                    }}
+                  >
+                    <BaseIcon title={$t('export')}>
+                      <IconPhExportLight />
+                    </BaseIcon>
+                  </BaseOptionButton>
+                )}
+                <BaseIcon
+                  disabled={props.readonly}
+                  title={props.readonly ? props.readonlyTip : $t('add_word')}
+                  onClick={() => !props.readonly && emit('add')}
+                >
                   <IconFluentAdd20Regular />
                 </BaseIcon>
                 <BaseIcon
-                  disabled={!params.list.length}
-                  title={$t('change_order')}
-                  onClick={() => (showSortDialog = !showSortDialog)}
+                  disabled={props.readonly || !params.list.length}
+                  title={props.readonly ? props.readonlyTip : $t('change_order')}
+                  onClick={() => !props.readonly && (showSortDialog = !showSortDialog)}
                 >
                   <IconFluentArrowSort20Regular />
                 </BaseIcon>

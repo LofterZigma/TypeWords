@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Article } from '@typewords/core/types/types.ts'
 import { BaseButton, Toast, MiniDialog, UploadButton ,BackIcon} from '@typewords/base'
-import { cloneDeep, loadJsLib } from '@typewords/core/utils'
+import { cloneDeep, ensureCustomDictCopy, loadJsLib } from '@typewords/core/utils'
 
 import List from '@typewords/core/components/list/List.vue'
 import { useWindowClick } from '@typewords/core/hooks/event.ts'
@@ -9,7 +9,8 @@ import { MessageBox } from '@typewords/core/utils/MessageBox.tsx'
 import { useRuntimeStore } from '@typewords/core/stores/runtime.ts'
 import { nanoid } from 'nanoid'
 import EditArticle from '@typewords/core/components/article/EditArticle.vue'
-import { getDefaultArticle } from '@typewords/core/types/func.ts'
+import { getDefaultArticle, getDefaultDict } from '@typewords/core/types/func.ts'
+import { useBaseStore } from '@typewords/core/stores/base.ts'
 import { onMounted } from 'vue'
 import { LIB_JS_URL } from '@typewords/core/config/env.ts'
 import { syncBookInMyStudyList } from '@typewords/core/hooks/article.ts'
@@ -17,6 +18,7 @@ import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
 
 const runtimeStore = useRuntimeStore()
+const baseStore = useBaseStore()
 
 let article = $ref<Article>(getDefaultArticle())
 let editArticleRef: any = $ref()
@@ -119,6 +121,16 @@ let showExport = $ref(false)
 useWindowClick(() => (showExport = false))
 
 onMounted(() => {
+  // 官方资源不允许直接编辑，自动转为副本
+  if (!runtimeStore.editDict.custom) {
+    const copy = ensureCustomDictCopy(runtimeStore.editDict)
+    copy.name = runtimeStore.editDict.name + ' (副本)'
+    const existIdx = baseStore.article.bookList.findIndex(v => v.id === copy.id)
+    if (existIdx === -1) {
+      baseStore.article.bookList.push(getDefaultDict(copy))
+    }
+    runtimeStore.editDict = copy
+  }
   if (runtimeStore.editDict.articles.length) {
     article = runtimeStore.editDict.articles[0]
   }

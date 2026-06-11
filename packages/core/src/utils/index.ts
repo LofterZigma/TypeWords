@@ -29,6 +29,7 @@ import {
 import { nextTick } from 'vue'
 import { Toast } from '@typewords/base'
 import { get } from 'idb-keyval'
+import { nanoid } from 'nanoid'
 import { saveHashSnapshot } from '../composables/useDataSyncPersistence'
 import { withAppBaseURL } from './base-url'
 
@@ -49,6 +50,11 @@ function checkRiskKey(origin: object, target: object) {
 
 function normalizeStoredDict(val: any): Dict {
   const next = { ...(val ?? {}) }
+  // 历史数据升级：系统虚拟词典补 system: true（无论旧存档是否有此字段）
+  const systemIds = [DictId.wordCollect, DictId.wordWrong, DictId.wordKnown, DictId.articleCollect]
+  if (systemIds.includes(next.enName ?? next.id)) {
+    next.system = true
+  }
   if (!next.enName && next.en_name) {
     next.enName = next.en_name
   }
@@ -233,10 +239,10 @@ export async function checkAndUpgradeSaveSetting(val: any) {
 export function shakeCommonDict(n: BaseState): BaseState {
   let data: BaseState = cloneDeep(n)
   data.word.bookList.map((v: Dict) => {
-    if (!v.custom && ![DictId.wordKnown, DictId.wordWrong, DictId.wordCollect].includes(v.enName)) v.words = []
+    if (!v.custom && !v.system) v.words = []
   })
   data.article.bookList.map((v: Dict) => {
-    if (!v.custom && ![DictId.articleCollect].includes(v.enName)) v.articles = []
+    if (!v.custom && !v.system) v.articles = []
     else {
       v.articles.map(a => {
         //运行时再生成
@@ -683,6 +689,45 @@ export function isSameDictResource(a?: DictIdentity | null, b?: DictIdentity | n
   if (!aIds.length) return false
   const bIds = new Set(getDictIdentityList(b))
   return aIds.some(id => bIds.has(id))
+}
+
+/** @deprecated 优先使用 dict.system 字段判断，仅作兼容 fallback */
+export function isBuiltinDictId(id: unknown): boolean {
+  return [DictId.wordKnown, DictId.wordWrong, DictId.wordCollect, DictId.articleCollect].includes(normalizeDictId(id) as any)
+}
+
+export function ensureCustomDictCopy(dict: Dict): Dict {
+  const next = getDefaultDict(dict)
+  // 系统虚拟词典（system=true）和用户自建词典（custom=true）都不需要创建副本
+  if (next.custom || next.system || isBuiltinDictId(next.enName || next.id)) {
+    return next
+  }
+  const sourceId = normalizeDictId(next.sourceId || next.id)
+  next.sourceId = sourceId
+  next.id = `custom-${nanoid(10)}`
+  next.custom = true
+  next.sync = false
+  next.userDictId = undefined
+  return next
+}
+
+export function findOfficialSourceDict(list: Dict[] = [], dict?: Partial<Dict> | null): Dict | undefined {
+  if (!dict) return undefined
+  const sourceId = normalizeDictId(dict.sourceId)
+  if (sourceId) {
+    const matchBySourceId = list.find(item => isDictIdMatch(item, sourceId))
+    if (matchBySourceId) return matchBySourceId
+  }
+  const currentId = normalizeDictId(dict.id)
+  if (currentId) {
+    const matchById = list.find(item => isDictIdMatch(item, currentId))
+    if (matchById) return matchById
+  }
+  const url = dict.url ? String(dict.url) : ''
+  if (url) {
+    return list.find(item => item.url === url)
+  }
+  return undefined
 }
 
 // check if it is a new user

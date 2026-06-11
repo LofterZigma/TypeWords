@@ -1,13 +1,11 @@
 import type { Article, Sentence } from '../types'
 import { getDefaultArticleWord, getDefaultDict, PracticeArticleWordType } from '../types'
-import { _nextTick, cloneDeep } from '../utils'
+import { _nextTick, cloneDeep, ensureCustomDictCopy } from '../utils'
 import { usePlayWordAudio, useTTsPlayAudio } from './sound'
 import { getSentenceAllText, getSentenceAllTranslateText } from './translate'
 import { useBaseStore } from '../stores/base'
 import { useRuntimeStore } from '../stores/runtime'
 import { useSettingStore } from '../stores/setting'
-import { nanoid } from 'nanoid'
-import { DictId } from '../config/env'
 
 function parseSentence(sentence: string) {
   // 先统一一些常见的“智能引号” -> 直引号，避免匹配问题
@@ -436,15 +434,11 @@ export function syncBookInMyStudyList(study = false) {
   _nextTick(() => {
     const base = useBaseStore()
     const runtimeStore = useRuntimeStore()
-    let temp = runtimeStore.editDict
-    let rIndex = base.article.bookList.findIndex(v => v.id === temp.id)
-    if (!temp.custom && temp.id !== DictId.articleCollect) {
-      temp.custom = true
-      if (!temp.id.includes('_custom')) {
-        temp.id += '_custom_' + nanoid(6)
-      }
-    }
+    const originalId = runtimeStore.editDict.id
+    let temp = ensureCustomDictCopy(runtimeStore.editDict)
+    let rIndex = base.article.bookList.findIndex(v => v.id === originalId)
     temp.length = temp.articles.length
+    runtimeStore.editDict = temp
     if (rIndex > -1) {
       base.article.bookList[rIndex] = getDefaultDict(temp)
       if (study) base.article.studyIndex = rIndex

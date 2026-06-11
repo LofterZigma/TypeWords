@@ -12,6 +12,8 @@ import {
   _dateFormat,
   _getDictDataByUrl,
   _nextTick,
+  ensureCustomDictCopy,
+  findOfficialSourceDict,
   msToHourMinute,
   resourceWrap,
   total,
@@ -46,6 +48,7 @@ const practice = usePracticeWordPersistence()
 let isEdit = $ref(false)
 let isAdd = $ref(false)
 let studyLoading = $ref(false)
+let _copyData: Dict | null = null // createCopy 生成的副本数据，作为 initialData 传给 EditBook
 let articleRef = $ref<HTMLDivElement>()
 let audioRef = $ref<HTMLAudioElement>()
 
@@ -94,8 +97,17 @@ const showBookDetail = computed(() => {
 
 const { loading } = useGetDict()
 
+function createCopy() {
+  // 生成副本数据，不写入 store。经由 initialData 传给 EditBook，确认后才写入
+  const copy = ensureCustomDictCopy(runtimeStore.editDict)
+  copy.name = runtimeStore.editDict.name + ' (副本)'
+  _copyData = copy
+  isAdd = true
+}
+
 onMounted(() => {
-  if (route.query?.isAdd) {
+  // id='new' 或 ?isAdd=true 均为新建场景（兼容从 /book/new 进入）
+  if (route.query?.isAdd || route.params?.id === 'new') {
     isAdd = true
     runtimeStore.editDict = getDefaultDict()
   }
@@ -113,8 +125,26 @@ function handleResize() {
 }
 
 function formClose() {
-  if (isEdit) isEdit = false
-  else router.back()
+  if (isEdit) {
+    isEdit = false
+  } else if (isAdd) {
+    if (_copyData) {
+      // 创建副本场景：取消回到书籍详情
+      _copyData = null
+      isAdd = false
+    } else {
+      // 直接新建场景（/book/new）：取消返回上一页
+      router.back()
+    }
+  } else {
+    router.back()
+  }
+}
+
+function handleSubmit() {
+  _copyData = null
+  isEdit = false
+  isAdd = false
 }
 
 const { data: book_list } = useFetch(resourceWrap(DICT_LIST.ARTICLE.ALL)).json()
@@ -124,17 +154,24 @@ function reset() {
     '继续此操作会重置所有文章，并从官方书籍获取最新文章列表，学习记录不会被重置。确认恢复默认吗？',
     '恢复默认',
     async () => {
-      let dict = book_list.value.find(v => v.url === runtimeStore.editDict.url) as Dict
+      let dict = findOfficialSourceDict(book_list.value ?? [], runtimeStore.editDict) as Dict
       if (dict && dict.id) {
         dict = await _getDictDataByUrl(dict, DictType.article)
         let rIndex = store.article.bookList.findIndex(v => v.id === runtimeStore.editDict.id)
         if (rIndex > -1) {
           let item = store.article.bookList[rIndex]
-          item.custom = false
-          item.id = dict.id
           item.articles = dict.articles
+          item.length = dict.articles.length
+          item.url = dict.url
+          item.cover = dict.cover
+          item.description = dict.description
+          item.name = dict.name
+          item.category = dict.category
+          item.tags = dict.tags
+          item.enName = dict.enName
+          item.sourceId = String(dict.id)
           if (item.lastLearnIndex >= item.articles.length) {
-            item.lastLearnIndex = item.articles.length - 1
+            item.lastLearnIndex = Math.max(item.articles.length - 1, 0)
           }
           runtimeStore.editDict = item
           Toast.success('恢复成功')
@@ -285,10 +322,11 @@ watch(
             <BaseButton v-if="runtimeStore.editDict.custom && runtimeStore.editDict.url" type="info" @click="reset">
               {{ $t('restore_default') }}
             </BaseButton>
-            <BaseButton :loading="studyLoading || loading" type="info" @click="isEdit = true">{{
-              $t('edit')
-            }}</BaseButton>
-            <BaseButton type="info" @click="router.push('/batch-edit-article')">{{
+            <BaseButton v-if="!runtimeStore.editDict.custom" type="info" @click="createCopy">{{ $t('create_copy') }}</BaseButton>
+             <BaseButton v-if="runtimeStore.editDict.custom" :loading="studyLoading || loading" type="info" @click="isEdit = true">{{
+                $t('edit')
+              }}</BaseButton>
+            <BaseButton v-if="runtimeStore.editDict.custom || runtimeStore.editDict.system" type="info" @click="router.push('/batch-edit-article')">{{
               $t('article_management')
             }}</BaseButton>
             <BaseButton :loading="studyLoading || loading" @click="startPractice">{{ $t('learn') }}</BaseButton>
@@ -489,13 +527,13 @@ watch(
       </div>
       <div class="" v-else>
         <div class="dict-header flex justify-between items-center relative">
-          <BackIcon class="dict-back z-2" @click="isAdd ? $router.back() : (isEdit = false)" />
-          <div class="dict-title absolute text-2xl text-align-center w-full">
-            {{ runtimeStore.editDict.id ? $t('edit_book') : $t('create_book') }}
+<BackIcon class="dict-back z-2" @click="formClose" />
+<div class="dict-title absolute text-2xl text-align-center w-full">
+  {{ isAdd ? $t('create_book') : $t('edit_book') }}
           </div>
         </div>
         <div class="center">
-          <EditBook :is-add="isAdd" :is-book="true" @close="formClose" @submit="isEdit = isAdd = false" />
+          <EditBook :is-add="isAdd" :is-book="true" :initial-data="_copyData"  @close="formClose" @submit="handleSubmit" />
         </div>
       </div>
     </div>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Dict } from '../../types'
-import { cloneDeep } from '../../utils'
+import { cloneDeep, ensureCustomDictCopy } from '../../utils'
 import { onMounted, reactive } from 'vue'
 import { useRuntimeStore } from '../../stores/runtime.ts'
 import { useBaseStore } from '../../stores/base.ts'
@@ -8,14 +8,15 @@ import { BaseButton, BaseInput, Form, FormItem, Option, Select, Toast, Textarea 
 import { getDefaultDict } from '../../types'
 
 import { addDict } from '../../apis'
-import { AppEnv, DictId } from '../../config/env.ts'
-import { nanoid } from 'nanoid'
+import { AppEnv } from '../../config/env.ts'
 import { DictType } from '../../types'
 import { useI18n } from 'vue-i18n'
 
 const props = defineProps<{
   isAdd: boolean
   isBook: boolean
+  /** 创建副本时传入的预填数据，含已生成的 id/sourceId 等 */
+  initialData?: Partial<Dict>
 }>()
 const emit = defineEmits<{
   submit: []
@@ -52,7 +53,13 @@ async function onSubmit() {
       let source = [store.article, store.word][props.isBook ? 0 : 1]
       //todo 可以检查的更准确些，比如json对比
       if (props.isAdd) {
-        data.id = 'custom-dict-' + Date.now()
+        if (props.initialData?.id) {
+          // 副本模式：保留已生成的 id 和 sourceId
+          data.id = props.initialData.id
+          data.sourceId = props.initialData.sourceId ?? ''
+        } else {
+          data.id = 'custom-dict-' + Date.now()
+        }
         data.custom = true
         if (source.bookList.find(v => v.name === data.name)) {
           Toast.warning($t('name_already_exists'))
@@ -74,19 +81,9 @@ async function onSubmit() {
           Toast.success($t('add_success'))
         }
       } else {
-        let rIndex = source.bookList.findIndex(v => v.id === data.id)
-        //任意修改，都将其变为自定义词典
-        if (
-          !data.custom &&
-          ![DictId.wordKnown, DictId.wordWrong, DictId.wordCollect, DictId.articleCollect].includes(
-            data.en_name || data.id
-          )
-        ) {
-          data.custom = true
-          if (!data.id.includes('_custom')) {
-            data.id += '_custom_' + nanoid(6)
-          }
-        }
+        const originalId = data.id
+        data = ensureCustomDictCopy(data)
+        let rIndex = source.bookList.findIndex(v => v.id === originalId)
         runtimeStore.editDict = data
         if (rIndex > -1) {
           source.bookList[rIndex] = getDefaultDict(data)
@@ -105,7 +102,10 @@ async function onSubmit() {
 }
 
 onMounted(() => {
-  if (!props.isAdd) {
+  if (props.initialData) {
+    // 创建副本模式：用传入的初始数据填充表单
+    dictForm = cloneDeep({ ...cloneDeep(DefaultDictForm), ...props.initialData })
+  } else if (!props.isAdd) {
     dictForm = cloneDeep(runtimeStore.editDict)
   }
 })

@@ -363,7 +363,7 @@ onMounted(() => {
           >
             {{ isMultiple ? $t('cancel') : $t('manage_books') }}
           </div>
-          <div class="color-link cursor-pointer" @click="nav('/book', { isAdd: true })">
+          <div class="color-link cursor-pointer" @click="nav('/book/new', { isAdd: true })">
             {{ $t('create_personal_book') }}
           </div>
         </div>
