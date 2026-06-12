@@ -73,6 +73,8 @@
 
   --color-translate-main: black;
   --color-translate-second: #818181;
+
+  --book-width: 9.6rem;
 }
 
 html.dark {
@@ -413,10 +415,12 @@ a {
 .book {
   @extend .anim;
   @apply p-3 rounded-md relative cursor-pointer hover:bg-fifth border-item-solid flex flex-col justify-between shrink-0;
+  border: 1px solid transparent;
   background: var(--bg-book);
-  $w: 7rem;
-  width: $w;
-  height: calc($w * 1.4);
+  border-color: rgb(225, 217, 217);
+  box-sizing: border-box;
+  width: var(--book-width);
+  height: calc(var(--book-width) * 1.4);
 }
 
 .line {

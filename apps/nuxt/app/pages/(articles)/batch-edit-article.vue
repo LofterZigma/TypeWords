@@ -12,6 +12,7 @@ import EditArticle from '@typewords/core/components/article/EditArticle.vue'
 import { getDefaultArticle, getDefaultDict } from '@typewords/core/types/func.ts'
 import { useBaseStore } from '@typewords/core/stores/base.ts'
 import { onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { LIB_JS_URL } from '@typewords/core/config/env.ts'
 import { syncBookInMyStudyList } from '@typewords/core/hooks/article.ts'
 import { useI18n } from 'vue-i18n'
@@ -19,6 +20,8 @@ const { t } = useI18n()
 
 const runtimeStore = useRuntimeStore()
 const baseStore = useBaseStore()
+const route = useRoute()
+const router = useRouter()
 
 let article = $ref<Article>(getDefaultArticle())
 let editArticleRef: any = $ref()
@@ -84,6 +87,26 @@ async function add() {
   if (r) {
     article = getDefaultArticle()
   }
+}
+
+async function handleBack() {
+  if (route.query.from !== 'import') {
+    router.back()
+    return
+  }
+
+  let r = await checkDataChange()
+  if (!r) return
+
+  const targetId = String(runtimeStore.editDict.id || route.query.targetId || '')
+  router.replace({
+    path: '/import',
+    query: {
+      type: 'article',
+      step: runtimeStore.editDict.articles.length ? '3' : '2',
+      targetId,
+    },
+  })
 }
 
 function saveArticle(val: Article): boolean {
@@ -257,7 +280,7 @@ function updateList(e) {
   <div class="add-article">
     <div class="aslide">
       <header class="flex gap-2 items-center">
-        <BackIcon />
+        <BackIcon @click="handleBack" />
         <div class="text-xl">{{ runtimeStore.editDict.name }}</div>
       </header>
       <List

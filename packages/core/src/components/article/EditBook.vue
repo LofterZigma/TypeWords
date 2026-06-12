@@ -17,9 +17,11 @@ const props = defineProps<{
   isBook: boolean
   /** 创建副本时传入的预填数据，含已生成的 id/sourceId 等 */
   initialData?: Partial<Dict>
+  submitMode?: 'store' | 'draft'
+  fluid?: boolean
 }>()
 const emit = defineEmits<{
-  submit: []
+  submit: [dict?: Dict]
   close: []
 }>()
 const runtimeStore = useRuntimeStore()
@@ -35,10 +37,10 @@ const DefaultDictForm = {
   type: DictType.article,
 }
 let dictForm: any = $ref(cloneDeep(DefaultDictForm))
-const dictFormRef = $ref()
+const dictFormRef: any = $ref()
 let loading = $ref(false)
 const { t: $t } = useI18n()
-const dictRules = reactive({
+const dictRules: any = reactive({
   name: [
     { required: true, message: $t('please_enter_name'), trigger: 'blur' },
     { max: 20, message: $t('name_max_20_chars'), trigger: 'blur' },
@@ -51,6 +53,16 @@ async function onSubmit() {
       let data: Dict = getDefaultDict(dictForm)
       data.type = props.isBook ? DictType.article : DictType.word
       let source = [store.article, store.word][props.isBook ? 0 : 1]
+      if (props.submitMode === 'draft') {
+        data.id = data.id || props.initialData?.id || 'pending-dict-' + Date.now()
+        data.custom = true
+        if (source.bookList.find(v => v.name === data.name)) {
+          Toast.warning($t('name_already_exists'))
+          return
+        }
+        emit('submit', getDefaultDict(data))
+        return
+      }
       //todo 可以检查的更准确些，比如json对比
       if (props.isAdd) {
         if (props.initialData?.id) {
@@ -77,7 +89,7 @@ async function onSubmit() {
           }
           source.bookList.push(cloneDeep(data))
           runtimeStore.editDict = data
-          emit('submit')
+          emit('submit', data)
           Toast.success($t('add_success'))
         }
       } else {
@@ -87,14 +99,13 @@ async function onSubmit() {
         runtimeStore.editDict = data
         if (rIndex > -1) {
           source.bookList[rIndex] = getDefaultDict(data)
-          emit('submit')
+          emit('submit', data)
           Toast.success($t('edit_success'))
         } else {
           source.bookList.push(getDefaultDict(data))
           Toast.success($t('edit_and_add_to_dict'))
         }
       }
-      console.log('submit!', data)
     } else {
       Toast.warning($t('please_fill_complete'))
     }
@@ -112,7 +123,7 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="w-120 mt-4">
+  <div :class="fluid ? 'w-full mt-4' : 'w-120 mt-4'">
     <Form ref="dictFormRef" :rules="dictRules" :model="dictForm" label-width="8rem">
       <FormItem :label="$t('name')" prop="name">
         <BaseInput v-model="dictForm.name" />

@@ -9,6 +9,7 @@ interface IProps {
   isAdd: boolean
   showCheckbox?: boolean
   checked?: boolean
+  selected?: boolean
   showProgress?: boolean
   isUser?: boolean //是否是用户的词典
 }
@@ -18,8 +19,9 @@ const props = withDefaults(defineProps<IProps>(), {
   isUser: false,
 })
 
-defineEmits<{
+const emit = defineEmits<{
   check: []
+  click: []
 }>()
 
 const progress = $computed(() => {
@@ -34,14 +36,26 @@ const studyProgress = $computed(() => {
 const coverSrc = $computed(() => {
   return props.item?.cover ? withAppBaseURL(props.item.cover) : ''
 })
+
+function handleClick(e: MouseEvent) {
+  if (props.showCheckbox) {
+    e.stopPropagation()
+    emit('check')
+  } else {
+    emit('click')
+  }
+}
 </script>
 
 <template>
-  <div :id="item?.id" v-if="!isAdd">
-    <div class="book overflow-hidden relative">
+  <div style="width: var(--book-width)" class="" :id="String(item?.id ?? '')" v-if="!isAdd" @click="handleClick">
+    <div
+      class="book overflow-hidden relative"
+      :class="[showCheckbox && 'book-selectable', (selected || checked) && 'book-selected']"
+    >
       <img class="absolute top-0 left-0 w-full object-cover" v-if="item?.cover" :src="coverSrc" alt="" />
       <div class="text-base mt-1" v-else>{{ item?.name }}</div>
-      <div class="absolute bottom-4 right-3 z-1" :class="item?.cover && 'color-white'">
+      <div class="absolute bottom-4 right-3 z-1" v-if="!item?.cover">
         <div>{{ studyProgress }}{{ item?.length }}{{ quantifier }}</div>
       </div>
       <div class="absolute bottom-2 left-3 right-3">
@@ -56,15 +70,19 @@ const coverSrc = $computed(() => {
         v-if="showCheckbox"
         :model-value="checked"
         @change="$emit('check')"
-        class="absolute left-3 bottom-3 z-2"
+        class="absolute left-2 bottom-3 z-3"
       />
       <div class="custom z-1" v-if="item.custom">{{ $t('custom') }}</div>
+      <div class="system z-1" v-else-if="item.system">内置</div>
       <!--      <div class="custom bg-red! color-white z-1" v-else-if="item.update">更新中</div>-->
       <!--      <div class="sync bg-red! color-white z-1" v-if="!item.sync && isUser && !showCheckbox">未同步</div>-->
     </div>
-    <div class="text-base mt-1" v-if="item?.cover">{{ item?.name }}</div>
+    <div class="flex justify-between text-base mt-1" v-if="item?.cover">
+      <div class="w-6/10 truncate">{{ item?.name }}</div>
+      <div>{{ studyProgress }}{{ item?.length }}{{ quantifier }}</div>
+    </div>
   </div>
-  <div v-else class="book" id="no-book">
+  <div v-else class="book" id="no-book" @click="handleClick">
     <div class="h-full center text-2xl">
       <IconFluentAdd16Regular />
     </div>
@@ -72,14 +90,38 @@ const coverSrc = $computed(() => {
 </template>
 
 <style scoped lang="scss">
+.book-selectable {
+  &:hover {
+    border-color: var(--color-input-border);
+  }
+}
+
+.book-selected {
+  @apply bg-fifth;
+  border-color: var(--color-select-bg) !important;
+}
+
 .custom {
   position: absolute;
   top: 4px;
   right: -22px;
   padding: 1px 20px;
-  background: var(--color-label-bg);
+  background: #409eff;
+  color: white;
   font-size: 11px;
   transform: rotate(45deg);
+}
+
+.system {
+  position: absolute;
+  left: 10px;
+  bottom: 18px;
+  border-radius: 8px;
+  padding: 2px 8px;
+  // background: var(--color-link);
+  background: #409eff;
+  color: white;
+  font-size: 11px;
 }
 
 .sync {

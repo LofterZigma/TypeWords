@@ -1,0 +1,14 @@
+---
+description: css 规范
+alwaysApply: true
+---
+
+# 在 **Agent 模式**下，若本次对话中**需要修改代码**
+- 样式尽量使用unocss
+- 图标尽量使用Fluent UI System Icons系列，可参考已有代码
+
+# 在 **Agent 模式**下，若本次对话中修改了代码之后
+
+- 任务结束时**不要**再执行 `pnpm -F @typewords/nuxt build`（或等价的 Nuxt 生产构建）来检查是否报错。
+- 依赖编辑器的类型检查、lint、以及用户本地/CI 的构建即可。
+- 仅在用户**明确要求**跑该构建、或排查与构建/打包直接相关的问题时，再执行上述  `pnpm -F @typewords/nuxt build` 命令。
