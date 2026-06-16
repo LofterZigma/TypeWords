@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import type { Article } from '@typewords/core/types/types.ts'
-import { BaseButton, Toast, MiniDialog, UploadButton ,BackIcon} from '@typewords/base'
-import { cloneDeep, loadJsLib } from '@typewords/core/utils'
+import { BaseButton, Toast, MiniDialog, BackIcon } from '@typewords/base'
+import { cloneDeep, ensureCustomDictCopy, loadJsLib } from '@typewords/core/utils'
 
 import List from '@typewords/core/components/list/List.vue'
 import { useWindowClick } from '@typewords/core/hooks/event.ts'
@@ -9,14 +9,19 @@ import { MessageBox } from '@typewords/core/utils/MessageBox.tsx'
 import { useRuntimeStore } from '@typewords/core/stores/runtime.ts'
 import { nanoid } from 'nanoid'
 import EditArticle from '@typewords/core/components/article/EditArticle.vue'
-import { getDefaultArticle } from '@typewords/core/types/func.ts'
+import { getDefaultArticle, getDefaultDict } from '@typewords/core/types/func.ts'
+import { useBaseStore } from '@typewords/core/stores/base.ts'
 import { onMounted } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { LIB_JS_URL } from '@typewords/core/config/env.ts'
 import { syncBookInMyStudyList } from '@typewords/core/hooks/article.ts'
 import { useI18n } from 'vue-i18n'
 const { t } = useI18n()
 
 const runtimeStore = useRuntimeStore()
+const baseStore = useBaseStore()
+const route = useRoute()
+const router = useRouter()
 
 let article = $ref<Article>(getDefaultArticle())
 let editArticleRef: any = $ref()
@@ -84,6 +89,43 @@ async function add() {
   }
 }
 
+async function handleBack() {
+  if (route.query.from !== 'import') {
+    router.back()
+    return
+  }
+
+  let r = await checkDataChange()
+  if (!r) return
+
+  syncBookInMyStudyList()
+
+  const targetId = String(runtimeStore.editDict.id || route.query.targetId || '')
+  const countBefore = Number(sessionStorage.getItem(`import-articles-count-${targetId}`) || 0)
+  const successCount = Math.max(0, runtimeStore.editDict.articles.length - countBefore)
+
+  if (runtimeStore.editDict.articles.length) {
+    sessionStorage.setItem(
+      `import-result-${targetId}`,
+      JSON.stringify({
+        successCount: successCount || runtimeStore.editDict.articles.length,
+        skippedCount: 0,
+        failedItems: [],
+        type: 'article',
+      })
+    )
+  }
+
+  router.replace({
+    path: '/import',
+    query: {
+      type: 'article',
+      step: runtimeStore.editDict.articles.length ? '3' : '2',
+      targetId,
+    },
+  })
+}
+
 function saveArticle(val: Article): boolean {
   if (val.id) {
     let rIndex = runtimeStore.editDict.articles.findIndex(v => v.id === val.id)
@@ -119,86 +161,32 @@ let showExport = $ref(false)
 useWindowClick(() => (showExport = false))
 
 onMounted(() => {
+  // 官方资源不允许直接编辑，自动转为副本
+  if (!runtimeStore.editDict.custom) {
+    const copy = ensureCustomDictCopy(runtimeStore.editDict)
+    copy.name = runtimeStore.editDict.name + ' (副本)'
+    const existIdx = baseStore.article.bookList.findIndex(v => v.id === copy.id)
+    if (existIdx === -1) {
+      baseStore.article.bookList.push(getDefaultDict(copy))
+    }
+    runtimeStore.editDict = copy
+  }
   if (runtimeStore.editDict.articles.length) {
     article = runtimeStore.editDict.articles[0]
   }
 })
 
 let exportLoading = $ref(false)
-let importLoading = $ref(false)
 
-function importData(e: any) {
-  let file = e.target.files[0]
-  if (!file) return
-  // no()
-  let reader = new FileReader()
-  reader.onload = async function (s) {
-    importLoading = true
-    const XLSX = await loadJsLib('XLSX', LIB_JS_URL.XLSX)
-    let data = s.target.result
-    let workbook = XLSX.read(data, { type: 'binary' })
-    let res: any[] = XLSX.utils.sheet_to_json(workbook.Sheets['Sheet1'])
-    if (res.length) {
-      let articles = res
-        .map(v => {
-          if (v['原文标题'] && v['原文正文']) {
-            return getDefaultArticle({
-              id: nanoid(6),
-              title: String(v['原文标题']),
-              titleTranslate: String(v['译文标题']),
-              text: String(v['原文正文']),
-              textTranslate: String(v['译文正文']),
-              audioSrc: String(v['音频地址']),
-            })
-          }
-        })
-        .filter(v => v)
-
-      let repeat = []
-      let noRepeat = []
-      articles.map((v: any) => {
-        let rIndex = runtimeStore.editDict.articles.findIndex(s => s.title === v.title)
-        if (rIndex > -1) {
-          v.index = rIndex
-          repeat.push(v)
-        } else {
-          noRepeat.push(v)
-        }
-      })
-
-      runtimeStore.editDict.articles = runtimeStore.editDict.articles.concat(noRepeat)
-
-      if (repeat.length) {
-        MessageBox.confirm(
-          '文章"' + repeat.map(v => v.title).join(', ') + '" 已存在，是否覆盖原有文章？',
-          '检测到重复文章',
-          () => {
-            repeat.map(v => {
-              runtimeStore.editDict.articles[v.index] = v
-              delete runtimeStore.editDict.articles[v.index]['index']
-            })
-            setTimeout(listEl?.scrollToBottom, 100)
-          },
-          null,
-          () => {
-            e.target.value = ''
-            importLoading = false
-            syncBookInMyStudyList()
-            Toast.success('导入成功！')
-          },
-          {t}
-        )
-      } else {
-        syncBookInMyStudyList()
-        Toast.success('导入成功！')
-      }
-    } else {
-      Toast.success('导入失败！原因：没有数据')
-    }
-    e.target.value = ''
-    importLoading = false
-  }
-  reader.readAsBinaryString(file)
+function goImportPage() {
+  router.push({
+    path: '/import',
+    query: {
+      type: 'article',
+      targetId: String(runtimeStore.editDict.id),
+      step: '2',
+    },
+  })
 }
 
 async function exportData(val: { type: string; data?: Article }) {
@@ -245,7 +233,7 @@ function updateList(e) {
   <div class="add-article">
     <div class="aslide">
       <header class="flex gap-2 items-center">
-        <BackIcon />
+        <BackIcon @click="handleBack" />
         <div class="text-xl">{{ runtimeStore.editDict.name }}</div>
       </header>
       <List
@@ -268,13 +256,7 @@ function updateList(e) {
       </List>
       <div class="add" v-if="!article.title">正在添加新文章...</div>
       <div class="footer">
-        <UploadButton
-          @change="importData"
-          :loading="importLoading"
-          accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
-        >
-          导入
-        </UploadButton>
+        <BaseButton @click="goImportPage">导入</BaseButton>
         <div class="export" style="position: relative" @click.stop="null">
           <BaseButton @click="showExport = true">导出</BaseButton>
           <MiniDialog v-model="showExport" style="width: 8rem; bottom: calc(100% + 1rem); top: unset">

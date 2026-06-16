@@ -234,7 +234,7 @@ export function useGetDict() {
       if (
         !dict?.articles?.length &&
         !dict?.custom &&
-        ![DictId.articleCollect].includes(dict.enName || String(dict.id)) &&
+        !dict?.system &&
         !dict?.is_default
       ) {
         fetching = true

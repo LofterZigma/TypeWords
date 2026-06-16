@@ -1,4 +1,5 @@
 import http from '../utils/http.ts'
+import { encryptPasswordFields } from '../utils/rsa-password.ts'
 
 import {CodeType} from '../types';
 
@@ -68,11 +69,16 @@ export interface WechatLoginParams {
 }
 
 export function loginApi(params: LoginParams) {
-  return http<{ token:string }>('user/login', params, null, 'post')
+  return http<{ token:string }>(
+    'user/login',
+    params.type === 'pwd' ? encryptPasswordFields(params, ['password']) : params,
+    null,
+    'post'
+  )
 }
 
 export function registerApi(params: RegisterParams) {
-  return http<{ token:string }>('user/register', params, null, 'post')
+  return http<{ token:string }>('user/register', encryptPasswordFields(params, ['password']), null, 'post')
 }
 
 export function sendCode(params: SendCodeParams) {
@@ -80,7 +86,7 @@ export function sendCode(params: SendCodeParams) {
 }
 
 export function resetPasswordApi(params: ResetPasswordParams) {
-  return http<boolean>('user/resetPassword', params, null, 'post')
+  return http<boolean>('user/resetPassword', encryptPasswordFields(params, ['newPassword']), null, 'post')
 }
 
 export function wechatLogin(params: WechatLoginParams) {
@@ -98,17 +104,22 @@ export function getUserInfo() {
 
 // 设置密码
 export function setPassword(data) {
-  return http('user/setPassword', data, null, 'post')
+  return http(
+    'user/setPassword',
+    encryptPasswordFields(data, ['newPwd', 'oldPwd', 'confirmPwd', 'newPassword', 'oldPassword', 'confirmPassword']),
+    null,
+    'post'
+  )
 }
 
 // 修改邮箱
 export function changeEmailApi(data) {
-  return http('user/changeEmail', data, null, 'post')
+  return http('user/changeEmail', encryptPasswordFields(data, ['pwd']), null, 'post')
 }
 
 // 修改手机号
 export function changePhoneApi(data) {
-  return http('user/changePhone', data, null, 'post')
+  return http('user/changePhone', encryptPasswordFields(data, ['pwd']), null, 'post')
 }
 
 // 修改用户信息

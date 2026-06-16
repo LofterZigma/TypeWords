@@ -1,5 +1,7 @@
 /// <reference types="vite/client" />
 
+declare module 'node-forge'
+
 declare global {
   interface Console {
     parse(v: any): void
@@ -26,6 +28,11 @@ declare global {
   interface ImportMeta {
     client: boolean
     server: boolean
+    env: ImportMetaEnv
+  }
+
+  interface ImportMetaEnv {
+    readonly VITE_PASSWORD_RSA_PUBLIC_KEY?: string
   }
 }
 export {}

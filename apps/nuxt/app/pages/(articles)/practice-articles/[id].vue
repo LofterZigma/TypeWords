@@ -7,7 +7,7 @@ import Panel from '@typewords/core/components/Panel.vue'
 import PracticeLayout from '@typewords/core/components/PracticeLayout.vue'
 import SettingDialog from '@typewords/core/components/setting/SettingDialog.vue'
 import { AppEnv, DICT_LIST } from '@typewords/core/config/env.ts'
-import { genArticleSectionData, usePlaySentenceAudio } from '@typewords/core/hooks/article.ts'
+import { genArticleSectionData, usePlayArticleTextAudio, usePlaySentenceAudio } from '@typewords/core/hooks/article.ts'
 import { useArticleOptions } from '@typewords/core/hooks/dict.ts'
 import {
   useDisableEventListener,
@@ -24,13 +24,20 @@ import { useRuntimeStore } from '@typewords/core/stores/runtime.ts'
 import { useSettingStore } from '@typewords/core/stores/setting.ts'
 import { getDefaultArticle, getDefaultDict, getDefaultWord } from '@typewords/core/types/func.ts'
 import type { Article, ArticleItem, ArticleWord, Dict, Statistics, Word } from '@typewords/core/types/types.ts'
-import { _getDictDataByUrl, _nextTick, cloneDeep, msToMinute, resourceWrap, total } from '@typewords/core/utils'
+import {
+  _getDictDataByUrl,
+  _nextTick,
+  cloneDeep,
+  ensureCustomDictCopy,
+  msToMinute,
+  resourceWrap,
+  total,
+} from '@typewords/core/utils'
 import { getPracticeArticleCacheLocal } from '@typewords/core/utils/cache.ts'
 import { usePracticeArticlePersistence } from '@typewords/core/composables/usePracticePersistence'
 import { useEvents, emitter, EventKey } from '@typewords/core/utils/eventBus'
 import { computed, onMounted, onUnmounted, provide, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { nanoid } from 'nanoid'
 import { DictType, PracticeArticleWordType, ShortcutKey } from '@typewords/core/types/enum.ts'
 
 const store = useBaseStore()
@@ -333,15 +340,15 @@ function saveArticle(val: Article) {
   console.log('saveArticle', val, JSON.stringify(val?.lrcPosition))
   console.log('saveArticle', val.textTranslate)
   showEditArticle = false
-  let rIndex = store.sbook.articles.findIndex(v => v.id === val.id)
+  const nextBook = ensureCustomDictCopy(store.sbook)
+  const rIndex = nextBook.articles.findIndex(v => v.id === val.id)
   if (rIndex > -1) {
-    store.sbook.articles[rIndex] = cloneDeep(val)
+    nextBook.articles[rIndex] = cloneDeep(val)
+  }
+  if (store.article.studyIndex > -1) {
+    store.article.bookList[store.article.studyIndex] = getDefaultDict(nextBook)
   }
   setArticle(val)
-  store.sbook.custom = true
-  if (!store.sbook.id.includes('_custom')) {
-    store.sbook.id += '_custom_' + nanoid(6)
-  }
 }
 
 function edit(val: Article = articleData.article) {
@@ -446,12 +453,19 @@ useEvents([
 ])
 
 const { playSentenceAudio } = usePlaySentenceAudio()
+const { playArticleTextAudio } = usePlayArticleTextAudio()
 
 function play2(e) {
   _nextTick(() => {
     if (settingStore.articleSound || e.handle) {
       playSentenceAudio(e.sentence, audioRef)
     }
+  })
+}
+
+function playArticleHeadAudio(e) {
+  _nextTick(() => {
+    playArticleTextAudio(e, audioRef)
   })
 }
 
@@ -473,6 +487,7 @@ provide('currentPractice', currentPractice)
         @next="next"
         @nextWord="nextWord"
         @play="play2"
+        @play-article-text-audio="playArticleHeadAudio"
         @replay="setArticle(articleData.article)"
         @complete="complete"
         :article="articleData.article"

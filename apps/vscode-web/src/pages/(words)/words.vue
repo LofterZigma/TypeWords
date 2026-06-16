@@ -731,7 +731,7 @@ onUnmounted(() => {
       </div>
     </div>
 
-    
+
     <div class="card flex flex-col">
       <div class="flex justify-between">
         <div class="title">{{ $t('my_dictionaries') }}</div>

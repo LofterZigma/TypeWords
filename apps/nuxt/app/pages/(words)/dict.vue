@@ -1,5 +1,4 @@
 <script setup lang="tsx">
-import { detail } from '@typewords/core/apis'
 import {
   BackIcon,
   BaseButton,
@@ -13,20 +12,27 @@ import {
   Textarea,
   Toast,
 } from '@typewords/base'
-import BaseTable from '@typewords/core/components/BaseTable.vue'
-import WordItem from '@typewords/core/components/word/WordItem.vue'
-import { AppEnv, DICT_LIST, DictId, LIB_JS_URL, TourConfig } from '@typewords/core/config/env.ts'
-import { getCurrentStudyWord } from '@typewords/core/hooks/dict.ts'
+import { detail } from '@typewords/core/apis'
+import { copyOfficialDict } from '@typewords/core/apis/dict.ts'
+import { wordDelete } from '@typewords/core/apis/words.ts'
 import EditBook from '@typewords/core/components/article/EditBook.vue'
+import BaseTable from '@typewords/core/components/BaseTable.vue'
 import PracticeSettingDialog from '@typewords/core/components/word/PracticeSettingDialog.vue'
+import WordItem from '@typewords/core/components/word/WordItem.vue'
+import { flushStatToStore, usePracticeWordPersistence } from '@typewords/core/composables/usePracticePersistence'
+import { AppEnv, DICT_LIST, LIB_JS_URL, TourConfig } from '@typewords/core/config/env.ts'
+import { getCurrentStudyWord } from '@typewords/core/hooks/dict.ts'
 import { useBaseStore } from '@typewords/core/stores/base.ts'
 import { useRuntimeStore } from '@typewords/core/stores/runtime.ts'
 import { useSettingStore } from '@typewords/core/stores/setting.ts'
+import { Sort, WordPracticeMode } from '@typewords/core/types/enum.ts'
 import { getDefaultDict, getDefaultWord } from '@typewords/core/types/func.ts'
+import type { Dict } from '@typewords/core/types/types.ts'
 import {
   _getDictDataByUrl,
   _nextTick,
   convertToWord,
+  ensureCustomDictCopy,
   isMobile,
   loadJsLib,
   resourceWrap,
@@ -34,17 +40,12 @@ import {
   shuffle,
   useNav,
 } from '@typewords/core/utils'
+import { getPracticeWordCacheLocal } from '@typewords/core/utils/cache.ts'
 import { MessageBox } from '@typewords/core/utils/MessageBox.tsx'
-import { nanoid } from 'nanoid'
-import { computed, onMounted, reactive, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
-import { useI18n } from 'vue-i18n'
-import { wordDelete } from '@typewords/core/apis/words.ts'
-import { copyOfficialDict } from '@typewords/core/apis/dict.ts'
-import { getPracticeWordCacheLocal, PRACTICE_WORD_CACHE } from '@typewords/core/utils/cache.ts'
-import { flushStatToStore, usePracticeWordPersistence } from '@typewords/core/composables/usePracticePersistence'
-import { Sort, WordPracticeMode } from '@typewords/core/types/enum.ts'
 import saveAs from 'file-saver'
+import { computed, onMounted, reactive, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
+import { useRoute, useRouter } from 'vue-router'
 
 const runtimeStore = useRuntimeStore()
 const wordPersistence = usePracticeWordPersistence()
@@ -62,6 +63,7 @@ const getDefaultFormWord = () => {
     word: '',
     phonetic0: '',
     phonetic1: '',
+    note: '',
     trans: '',
     sentences: '',
     phrases: '',
@@ -83,18 +85,13 @@ let studyLoading = $ref(false)
 
 function syncDictInMyStudyList(study = false) {
   _nextTick(() => {
-    //这里不能移，一定要先找到对应的词典，再去改id。不然先改id，就找不到对应的词典了
-    let rIndex = base.word.bookList.findIndex(v => v.id === runtimeStore.editDict.id)
+    const originalId = runtimeStore.editDict.id
 
     runtimeStore.editDict.words = allList
-    let temp = runtimeStore.editDict
-    if (!temp.custom && ![DictId.wordKnown, DictId.wordWrong, DictId.wordCollect].includes(temp.id)) {
-      temp.custom = true
-      if (!temp.id.includes('_custom')) {
-        temp.id += '_custom_' + nanoid(6)
-      }
-    }
+    let temp = ensureCustomDictCopy(runtimeStore.editDict)
+    let rIndex = base.word.bookList.findIndex(v => v.id === originalId)
     temp.length = temp.words.length
+    runtimeStore.editDict = temp
     if (rIndex > -1) {
       base.word.bookList[rIndex] = getDefaultDict(temp)
       if (study) base.word.studyIndex = rIndex
@@ -110,6 +107,14 @@ async function onSubmitWord() {
   await wordFormRef.validate(valid => {
     if (valid) {
       let data: any = convertToWord(wordForm)
+      // 笔记集中存储，不保存在 Word 对象内
+      const noteVal = wordForm.note?.trim()
+      const wordKey = wordForm.word
+      if (noteVal) {
+        base.noteData[wordKey] = noteVal
+      } else {
+        delete base.noteData[wordKey]
+      }
       //todo 可以检查的更准确些，比如json对比
       if (data.id) {
         let r = allList.find(v => v.id === data.id)
@@ -194,6 +199,7 @@ function word2Str(word) {
   res.word = word.word
   res.phonetic1 = word.phonetic1
   res.phonetic0 = word.phonetic0
+  res.note = base.noteData[word.word] ?? ''
   res.trans = word.trans.map(v => (v.pos + v.cn).replaceAll('"', '')).join('\n')
   res.sentences = word.sentences.map(v => (v.c + '\n' + v.cn).replaceAll('"', '')).join('\n\n')
   res.phrases = word.phrases.map(v => (v.c + '\n' + v.cn).replaceAll('"', '')).join('\n\n')
@@ -232,10 +238,19 @@ function closeWordForm() {
 let isEdit = $ref(false)
 let isAdd = $ref(false)
 let activeTab = $ref<'list' | 'edit'>('list') // 移动端标签页状态
+let _copyData: Dict | null = null // createCopy 生成的副本数据，作为 initialData 传给 EditBook
 
 const showBookDetail = computed(() => {
   return !(isAdd || isEdit)
 })
+
+function createCopy() {
+  // 生成副本数据，不写入 store。经由 initialData 传给 EditBook，确认后才写入
+  const copy = ensureCustomDictCopy(runtimeStore.editDict)
+  copy.name = runtimeStore.editDict.name + ' (副本)'
+  _copyData = copy
+  isAdd = true
+}
 
 onMounted(async () => {
   if (route.query?.isAdd) {
@@ -245,13 +260,7 @@ onMounted(async () => {
     if (!runtimeStore.editDict.id) {
       return router.push('/words')
     } else {
-      if (
-        !runtimeStore.editDict.words.length &&
-        !runtimeStore.editDict.custom &&
-        ![DictId.wordCollect, DictId.wordWrong, DictId.wordKnown].includes(
-          runtimeStore.editDict.enName || runtimeStore.editDict.id
-        )
-      ) {
+      if (!runtimeStore.editDict.words.length && !runtimeStore.editDict.custom && !runtimeStore.editDict.system) {
         loading = true
         let dictList = await fetch(resourceWrap(DICT_LIST.WORD.ALL)).then(r => r.json())
         let dict = await _getDictDataByUrl(runtimeStore.editDict)
@@ -293,8 +302,20 @@ async function getDetail(id) {
 }
 
 function formClose() {
-  if (isEdit) isEdit = false
-  else router.back()
+  if (isEdit) {
+    isEdit = false
+  } else if (isAdd) {
+    _copyData = null
+    isAdd = false
+  } else {
+    router.back()
+  }
+}
+
+function handleSubmit() {
+  _copyData = null
+  isEdit = false
+  isAdd = false
 }
 
 let showPracticeSettingDialog = $ref(false)
@@ -350,173 +371,14 @@ async function startTest() {
 let exportXlsxLoading = $ref(false)
 let exportJsonLoading = $ref(false)
 
-let importLoading = $ref(false)
 let tableRef = ref()
 
-function importXlsxData(e) {
-  if (!importLoading) {
-    let file = e.target.files[0]
-    if (!file) return
-
-    let reader = new FileReader()
-    reader.onload = async function (s) {
-      let data = s.target.result
-      importLoading = true
-      const XLSX = await loadJsLib('XLSX', LIB_JS_URL.XLSX)
-      let workbook = XLSX.read(data, { type: 'binary' })
-      let res: any[] = XLSX.utils.sheet_to_json(workbook.Sheets['Sheet1'])
-      if (res.length) {
-        let words = res
-          .map(v => {
-            if (v['单词']) {
-              let data = null
-              try {
-                data = convertToWord({
-                  id: nanoid(6),
-                  word: v['单词'],
-                  phonetic0: v['音标①'] ?? '',
-                  phonetic1: v['音标②'] ?? '',
-                  trans: v['翻译'] ?? '',
-                  sentences: v['例句'] ?? '',
-                  phrases: v['短语'] ?? '',
-                  synos: v['近义词'] ?? '',
-                  relWords: v['同根词'] ?? '',
-                  etymology: v['词源'] ?? '',
-                })
-              } catch (e) {
-                console.error('导入单词报错' + v['单词'], e.message)
-              }
-              return data
-            }
-          })
-          .filter(v => v)
-        if (words.length) {
-          let repeat = []
-          let noRepeat = []
-          words.map((v: any) => {
-            let rIndex = runtimeStore.editDict.words.findIndex(s => s.word === v.word)
-            if (rIndex > -1) {
-              v.index = rIndex
-              repeat.push(v)
-            } else {
-              noRepeat.push(v)
-            }
-          })
-
-          runtimeStore.editDict.words = runtimeStore.editDict.words.concat(noRepeat)
-
-          if (repeat.length) {
-            MessageBox.confirm(
-              '单词"' + repeat.map(v => v.word).join(', ') + '" 已存在，是否覆盖原单词？',
-              '检测到重复单词',
-              () => {
-                repeat.map(v => {
-                  runtimeStore.editDict.words[v.index] = v
-                  delete runtimeStore.editDict.words[v.index]['index']
-                })
-              },
-              null,
-              () => {
-                tableRef.value.closeImportDialog()
-                e.target.value = ''
-                importLoading = false
-                allList = runtimeStore.editDict.words
-                tableRef.value.getData()
-                syncDictInMyStudyList()
-                Toast.success('导入成功！')
-              },
-              { t: $t }
-            )
-          } else {
-            tableRef.value.closeImportDialog()
-            e.target.value = ''
-            importLoading = false
-            allList = runtimeStore.editDict.words
-            tableRef.value.getData()
-            syncDictInMyStudyList()
-            Toast.success('导入成功！')
-          }
-        } else {
-          Toast.warning('导入失败！原因：没有数据/未认别到数据')
-        }
-      } else {
-        Toast.warning('导入失败！原因：没有数据')
-      }
-      e.target.value = ''
-      importLoading = false
-    }
-    reader.readAsBinaryString(file)
-  }
-}
-
-function importJsonData(e) {
-  if (!importLoading) {
-    let file = e.target.files[0]
-    if (!file) return
-
-    let reader = new FileReader()
-    reader.onload = async function (s) {
-      let data = s.target.result
-      let res: any[] = JSON.parse(data.toString())
-      console.log(res)
-      let words = res
-        .filter(v => v.word)
-        .map(v => {
-          return getDefaultWord(v)
-        })
-
-      if (words.length) {
-        let repeat = []
-        let noRepeat = []
-        words.map((v: any) => {
-          let rIndex = runtimeStore.editDict.words.findIndex(s => s.word === v.word)
-          if (rIndex > -1) {
-            v.index = rIndex
-            repeat.push(v)
-          } else {
-            noRepeat.push(v)
-          }
-        })
-
-        runtimeStore.editDict.words = runtimeStore.editDict.words.concat(noRepeat)
-
-        if (repeat.length) {
-          MessageBox.confirm(
-            '单词"' + repeat.map(v => v.word).join(', ') + '" 已存在，是否覆盖原单词？',
-            '检测到重复单词',
-            () => {
-              repeat.map(v => {
-                runtimeStore.editDict.words[v.index] = v
-                delete runtimeStore.editDict.words[v.index]['index']
-              })
-            },
-            null,
-            () => {
-              tableRef.value.closeImportDialog()
-              e.target.value = ''
-              importLoading = false
-              allList = runtimeStore.editDict.words
-              tableRef.value.getData()
-              syncDictInMyStudyList()
-              Toast.success('导入成功！')
-            },
-            { t: $t }
-          )
-        } else {
-          tableRef.value.closeImportDialog()
-          e.target.value = ''
-          importLoading = false
-          allList = runtimeStore.editDict.words
-          tableRef.value.getData()
-          syncDictInMyStudyList()
-          Toast.success('导入成功！')
-        }
-      } else {
-        Toast.warning('导入失败！原因：没有数据/未认别到数据')
-      }
-    }
-    reader.readAsText(file)
-  }
+function goImportPage() {
+  nav('/import', {
+    type: 'word',
+    targetId: String(runtimeStore.editDict.id),
+    step: '2',
+  })
 }
 
 async function exportXlsxData() {
@@ -532,6 +394,7 @@ async function exportXlsxData() {
       单词: t.word,
       '音标①': t.phonetic0,
       '音标②': t.phonetic1,
+      笔记: t.note,
       翻译: t.trans,
       例句: t.sentences,
       短语: t.phrases,
@@ -633,7 +496,7 @@ function getLocalList({ pageNo, pageSize, searchKey }) {
 }
 
 async function requestList({ pageNo, pageSize, searchKey }) {
-  if (!dict.custom && ![DictId.wordCollect, DictId.wordWrong, DictId.wordKnown].includes(dict.enName || dict.id)) {
+  if (!dict.custom && !dict.system) {
     // 非自定义词典，直接请求json
 
     //如果没数据则请求
@@ -684,6 +547,8 @@ function onSort(type: Sort, pageNo: number, pageSize: number) {
   }
 }
 
+const editable = $computed(() => runtimeStore.editDict.custom || runtimeStore.editDict.system)
+
 defineRender(() => {
   return (
     <BasePage>
@@ -693,9 +558,15 @@ defineRender(() => {
             <BackIcon class="dict-back z-2" />
             <div class="dict-title absolute page-title text-align-center w-full">{runtimeStore.editDict.name}</div>
             <div class="dict-actions flex">
-              <BaseButton loading={studyLoading || loading} type="info" onClick={() => (isEdit = true)}>
-                {$t('edit')}
-              </BaseButton>
+              {runtimeStore.editDict.custom ? (
+                <BaseButton loading={studyLoading || loading} type="info" onClick={() => (isEdit = true)}>
+                  {$t('edit')}
+                </BaseButton>
+              ) : (
+                <BaseButton loading={studyLoading || loading} type="info" onClick={createCopy}>
+                  {$t('create_copy')}
+                </BaseButton>
+              )}
               <BaseButton loading={studyLoading || loading} type="info" onClick={startTest}>
                 {$t('test')}
               </BaseButton>
@@ -735,18 +606,18 @@ defineRender(() => {
                 onDel={batchDel}
                 onSort={onSort}
                 onAdd={addWord}
-                onImportXlsx={importXlsxData}
-                onImportJson={importJsonData}
+                onImport={goImportPage}
                 onExportXlsx={exportXlsxData}
                 onExportJson={exportJsonData}
                 exportXlsxLoading={exportXlsxLoading}
                 exportJsonLoading={exportJsonLoading}
-                importLoading={importLoading}
+                readonly={!editable}
+                readonlyTip={$t('create_copy_to_edit')}
               >
                 {val => (
                   <WordItem
                     showTransPop={false}
-                    onClick={() => editWord(val.item)}
+                    onClick={() => editable && editWord(val.item)}
                     index={val.index}
                     showCollectIcon={false}
                     showMarkIcon={false}
@@ -756,14 +627,25 @@ defineRender(() => {
                       prefix: () => val.checkbox(val.item),
                       suffix: () => (
                         <div class="flex flex-col">
-                          <BaseIcon class="option-icon" onClick={() => editWord(val.item)} title="编辑">
+                          <BaseIcon
+                            class="option-icon"
+                            disabled={!editable}
+                            title={runtimeStore.editDict.custom ? $t('edit') : $t('create_copy_to_edit')}
+                            onClick={() => runtimeStore.editDict.custom && editWord(val.item)}
+                          >
                             <IconFluentTextEditStyle20Regular />
                           </BaseIcon>
-                          <PopConfirm title="确认删除？" onConfirm={() => batchDel([val.item.id])}>
-                            <BaseIcon class="option-icon" title="删除">
+                          {editable ? (
+                            <PopConfirm title="确认删除？" onConfirm={() => batchDel([val.item.id])}>
+                              <BaseIcon class="option-icon" title={$t('delete')}>
+                                <DeleteIcon />
+                              </BaseIcon>
+                            </PopConfirm>
+                          ) : (
+                            <BaseIcon class="option-icon" disabled={true} title={$t('create_copy_to_edit')}>
                               <DeleteIcon />
                             </BaseIcon>
-                          </PopConfirm>
+                          )}
                         </div>
                       ),
                     }}
@@ -799,6 +681,14 @@ defineRender(() => {
                       onUpdate:modelValue={e => (wordForm.trans = e)}
                       placeholder="一行一个翻译，前面词性，后面内容（如n.取消）；多个翻译请换行"
                       autosize={{ minRows: 6, maxRows: 10 }}
+                    />
+                  </FormItem>
+                  <FormItem label="笔记">
+                    <Textarea
+                      modelValue={wordForm.note}
+                      onUpdate:modelValue={e => (wordForm.note = e)}
+                      placeholder="记录这个单词的个人笔记"
+                      autosize={{ minRows: 3, maxRows: 8 }}
                     />
                   </FormItem>
                   <FormItem label="例句">
@@ -857,22 +747,19 @@ defineRender(() => {
       ) : (
         <div class="card mb-0 dict-detail-card">
           <div class="dict-header flex justify-between items-center relative">
-            <BackIcon
-              class="dict-back z-2"
-              onClick={() => {
-                if (isAdd) {
-                  router.back()
-                } else {
-                  isEdit = false
-                }
-              }}
-            />
+            <BackIcon class="dict-back z-2" onClick={formClose} />
             <div class="dict-title absolute page-title text-align-center w-full">
-              {runtimeStore.editDict.id ? $t('edit_dict') : $t('create_dict')}
+              {isAdd ? $t('create_dict') : $t('edit_dict')}
             </div>
           </div>
           <div class="center">
-            <EditBook isAdd={isAdd} isBook={false} onClose={formClose} onSubmit={() => (isEdit = isAdd = false)} />
+            <EditBook
+              isAdd={isAdd}
+              isBook={false}
+              initialData={_copyData}
+              onClose={formClose}
+              onSubmit={handleSubmit}
+            />
           </div>
         </div>
       )}

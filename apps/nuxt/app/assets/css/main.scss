@@ -73,6 +73,9 @@
 
   --color-translate-main: black;
   --color-translate-second: #818181;
+
+  --book-width: 9.6rem;
+  --book-border: rgb(225, 217, 217);
 }
 
 html.dark {
@@ -119,6 +122,7 @@ html.dark {
   --bg-book: #35373a;
 
   --color-line: rgb(66, 66, 66);
+  --book-border: var(--bg-book);
 }
 
 @media (max-width: 1706px) {
@@ -414,9 +418,11 @@ a {
   @extend .anim;
   @apply p-3 rounded-md relative cursor-pointer hover:bg-fifth border-item-solid flex flex-col justify-between shrink-0;
   background: var(--bg-book);
-  $w: 7rem;
-  width: $w;
-  height: calc($w * 1.4);
+  border: 1px solid transparent;
+  border-color: var(--book-border);
+  box-sizing: border-box;
+  width: var(--book-width);
+  height: calc(var(--book-width) * 1.4);
 }
 
 .line {

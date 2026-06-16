@@ -14,7 +14,7 @@ import { emitter, EventKey, useEventsByWatch } from '../../utils/eventBus'
 import { onMounted, onUnmounted, watch } from 'vue'
 import SentenceHightLightWord from './SentenceHightLightWord.vue'
 import { _nextTick, last, normalizeWord, useNav } from '../../utils'
-import { BaseButton, BaseIcon, Toast, ToastComponent, Tooltip, VolumeIcon } from '@typewords/base'
+import { BaseButton, BaseIcon, Textarea, Toast, ToastComponent, Tooltip, VolumeIcon } from '@typewords/base'
 import Space from '../article/Space.vue'
 import { useI18n } from 'vue-i18n'
 import { useWordOptions } from '../../hooks/dict.ts'
@@ -99,6 +99,8 @@ const typingWordRef = $ref<HTMLDivElement>()
 // const volumeTranslateIconRef: any = $ref()
 
 let showAllCandidates = $ref(false)
+let editingNote = $ref(false)
+let noteInputValue = $ref('')
 
 let displayWord = $computed(() => {
   return props.word.word.slice(input.length + wrong.length)
@@ -131,13 +133,15 @@ function updateCurrentWordInfo() {
   }
 }
 
-watch(() => props.word, reset, { deep: true })
+watch(() => props.word, reset)
 
 function reset() {
   clearJumpTimer()
   wrong = input = ''
   wordRepeatCount = 0
   showWordResult.value = inputLock = completeSelect = showAllCandidates = false
+  editingNote = false
+  noteInputValue = ''
   currentPracticeSentenceIndex = -1
   wordCompletedTime = 0 // 重置时间戳
   wrongTimes.value = 0
@@ -311,7 +315,11 @@ async function onTyping(e: KeyboardEvent) {
       if (right) {
         clearJumpTimer()
         // 如果单词刚完成（300ms内），忽略空格键，避免同时按下最后一个字母和空格键时跳过
-        if (wordCompletedTime && Date.now() - wordCompletedTime < 300) {
+        // 手动模式使用独立的空格冷却时间设置
+        const spaceCooldown = settingStore.autoNextWord
+          ? settingStore.waitTimeForChangeWord
+          : settingStore.spaceCooldownTime
+        if (wordCompletedTime && Date.now() - wordCompletedTime < spaceCooldown) {
           return
         }
         completeTypeWord(false)
@@ -546,6 +554,35 @@ function hideWord() {
   showFullWord = false
 }
 
+function editNote() {
+  editingNote = !editingNote
+  if (editingNote) {
+    noteInputValue = store.noteData[props.word.word] ?? ''
+  } else {
+    noteInputValue = ''
+  }
+}
+
+function saveNote() {
+  if (noteInputValue.trim()) {
+    store.noteData[props.word.word] = noteInputValue
+  } else {
+    delete store.noteData[props.word.word]
+  }
+  editingNote = false
+}
+
+function cancelNote() {
+  editingNote = false
+  noteInputValue = ''
+}
+
+function deleteNote() {
+  delete store.noteData[props.word.word]
+  editingNote = false
+  noteInputValue = ''
+}
+
 function typo() {
   emit('wrong')
   wrongTimes.value++
@@ -757,6 +794,9 @@ const isCollect = $computed(() => isWordCollect(props.word))
           <IconFluentCheckmarkCircle16Regular v-if="!isSimple" />
           <IconFluentCheckmarkCircle16Filled v-else />
         </BaseIcon>
+        <BaseIcon @click="editNote" :title="editingNote ? '完成编辑笔记' : '编辑笔记'">
+          <IconFluentClipboardTextEdit20Regular />
+        </BaseIcon>
         <BaseIcon
           @click="toggleWordCollect(word)"
           :title="
@@ -838,6 +878,29 @@ const isCollect = $computed(() => isWordCollect(props.word))
         <TranslationList :word="word" :showFull="!settingStore.dictation || showWordResult || showFullWord" />
       </div>
     </div>
+
+    <template v-if="editingNote || store.noteData[word.word]?.trim()">
+      <div class="line-white my-3"></div>
+      <div class="flex flex-col gap-2">
+        <div class="flex">
+          <div class="label">笔记</div>
+          <Textarea
+            autofocus
+            v-if="editingNote"
+            v-model="noteInputValue"
+            placeholder="记录这个单词的个人笔记"
+            :autosize="{ minRows: 4, maxRows: 8 }"
+            class="note-textarea"
+          />
+          <div v-else class="note-content">{{ store.noteData[word.word] }}</div>
+        </div>
+        <div v-if="editingNote" class="flex justify-end mt-2">
+          <BaseButton size="large" type="info" v-if="store.noteData[word.word]" @click="deleteNote">删除</BaseButton>
+          <BaseButton size="large" @click="cancelNote">取消</BaseButton>
+          <BaseButton size="large" type="primary" @click="saveNote">保存</BaseButton>
+        </div>
+      </div>
+    </template>
 
     <div
       class="other anim"
@@ -968,6 +1031,7 @@ const isCollect = $computed(() => isWordCollect(props.word))
       </div>
     </div>
     <div
+      v-if="!editingNote"
       class="cursor"
       :style="{
         top: cursor.top + 'px',
@@ -1043,6 +1107,10 @@ const isCollect = $computed(() => isWordCollect(props.word))
 
   .cn {
     @apply text-base;
+  }
+
+  .note-content {
+    @apply text-base whitespace-pre-wrap;
   }
 
   .en {

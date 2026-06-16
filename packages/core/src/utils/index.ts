@@ -29,6 +29,7 @@ import {
 import { nextTick } from 'vue'
 import { Toast } from '@typewords/base'
 import { get } from 'idb-keyval'
+import { nanoid } from 'nanoid'
 import { saveHashSnapshot } from '../composables/useDataSyncPersistence'
 import { withAppBaseURL } from './base-url'
 
@@ -49,6 +50,11 @@ function checkRiskKey(origin: object, target: object) {
 
 function normalizeStoredDict(val: any): Dict {
   const next = { ...(val ?? {}) }
+  // 历史数据升级：系统虚拟词典补 system: true（无论旧存档是否有此字段）
+  const systemIds = [DictId.wordCollect, DictId.wordWrong, DictId.wordKnown, DictId.articleCollect]
+  if (systemIds.includes(next.enName ?? next.id)) {
+    next.system = true
+  }
   if (!next.enName && next.en_name) {
     next.enName = next.en_name
   }
@@ -233,10 +239,10 @@ export async function checkAndUpgradeSaveSetting(val: any) {
 export function shakeCommonDict(n: BaseState): BaseState {
   let data: BaseState = cloneDeep(n)
   data.word.bookList.map((v: Dict) => {
-    if (!v.custom && ![DictId.wordKnown, DictId.wordWrong, DictId.wordCollect].includes(v.enName)) v.words = []
+    if (!v.custom && !v.system) v.words = []
   })
   data.article.bookList.map((v: Dict) => {
-    if (!v.custom && ![DictId.articleCollect].includes(v.enName)) v.articles = []
+    if (!v.custom && !v.system) v.articles = []
     else {
       v.articles.map(a => {
         //运行时再生成
@@ -488,6 +494,60 @@ export function shuffle<T>(array: T[]): T[] {
   return result
 }
 
+export type ShufflePracticeRange = {
+  start: number
+  end: number
+}
+
+export type ShufflePracticeSetting = {
+  total: number
+  range: ShufflePracticeRange
+}
+
+export function normalizeShufflePracticeRange(range: ShufflePracticeRange, max: number): ShufflePracticeRange {
+  const safeMax = Math.max(0, Math.floor(Number(max) || 0))
+  let start = Math.floor(Number(range?.start) || 0)
+  let end = Math.floor(Number(range?.end) || 0)
+
+  start = Math.min(Math.max(start, 0), safeMax)
+  end = Math.min(Math.max(end, 0), safeMax)
+
+  if (start > end) {
+    start = end
+  }
+
+  return { start, end }
+}
+
+export function toShufflePracticeRange(startNo: number, endNo: number, max: number): ShufflePracticeRange {
+  const safeEndNo = Math.floor(Number(endNo) || 0)
+  const safeStartNo = safeEndNo > 0 ? Math.max(1, Math.floor(Number(startNo) || 1)) : 0
+  return normalizeShufflePracticeRange(
+    {
+      start: safeStartNo > 0 ? safeStartNo - 1 : 0,
+      end: safeEndNo,
+    },
+    max
+  )
+}
+
+export function getShufflePracticeWords<T extends { word: string }>(
+  words: T[],
+  setting: ShufflePracticeSetting,
+  ignoreSet?: Set<string>
+) {
+  const range = normalizeShufflePracticeRange(setting.range, words.length)
+  const total = Math.max(0, Math.floor(Number(setting.total) || 0))
+  const candidates = words.slice(range.start, range.end).filter(v => !ignoreSet?.has(v.word))
+
+  return {
+    range,
+    total,
+    available: candidates.length,
+    words: shuffle(candidates).slice(0, total),
+  }
+}
+
 export function last<T>(array: T[]): T | undefined {
   return array.length > 0 ? array[array.length - 1] : undefined
 }
@@ -629,6 +689,45 @@ export function isSameDictResource(a?: DictIdentity | null, b?: DictIdentity | n
   if (!aIds.length) return false
   const bIds = new Set(getDictIdentityList(b))
   return aIds.some(id => bIds.has(id))
+}
+
+/** @deprecated 优先使用 dict.system 字段判断，仅作兼容 fallback */
+export function isBuiltinDictId(id: unknown): boolean {
+  return [DictId.wordKnown, DictId.wordWrong, DictId.wordCollect, DictId.articleCollect].includes(normalizeDictId(id) as any)
+}
+
+export function ensureCustomDictCopy(dict: Dict): Dict {
+  const next = getDefaultDict(dict)
+  // 系统虚拟词典（system=true）和用户自建词典（custom=true）都不需要创建副本
+  if (next.custom || next.system || isBuiltinDictId(next.enName || next.id)) {
+    return next
+  }
+  const sourceId = normalizeDictId(next.sourceId || next.id)
+  next.sourceId = sourceId
+  next.id = `custom-${nanoid(10)}`
+  next.custom = true
+  next.sync = false
+  next.userDictId = undefined
+  return next
+}
+
+export function findOfficialSourceDict(list: Dict[] = [], dict?: Partial<Dict> | null): Dict | undefined {
+  if (!dict) return undefined
+  const sourceId = normalizeDictId(dict.sourceId)
+  if (sourceId) {
+    const matchBySourceId = list.find(item => isDictIdMatch(item, sourceId))
+    if (matchBySourceId) return matchBySourceId
+  }
+  const currentId = normalizeDictId(dict.id)
+  if (currentId) {
+    const matchById = list.find(item => isDictIdMatch(item, currentId))
+    if (matchById) return matchById
+  }
+  const url = dict.url ? String(dict.url) : ''
+  if (url) {
+    return list.find(item => item.url === url)
+  }
+  return undefined
 }
 
 // check if it is a new user

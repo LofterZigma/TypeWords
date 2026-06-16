@@ -48,6 +48,7 @@ const getDefaultFormWord = () => {
     word: '',
     phonetic0: '',
     phonetic1: '',
+    note: '',
     trans: '',
     sentences: '',
     phrases: '',
@@ -96,6 +97,14 @@ async function onSubmitWord() {
   await wordFormRef.validate(valid => {
     if (valid) {
       let data: any = convertToWord(wordForm)
+      // 笔记集中存储，不保存在 Word 对象内
+      const noteVal = wordForm.note?.trim()
+      const wordKey = wordForm.word
+      if (noteVal) {
+        base.noteData[wordKey] = noteVal
+      } else {
+        delete base.noteData[wordKey]
+      }
       //todo 可以检查的更准确些，比如json对比
       if (data.id) {
         let r = allList.find(v => v.id === data.id)
@@ -180,6 +189,7 @@ function word2Str(word) {
   res.word = word.word
   res.phonetic1 = word.phonetic1
   res.phonetic0 = word.phonetic0
+  res.note = base.noteData[word.word] ?? ''
   res.trans = word.trans.map(v => (v.pos + v.cn).replaceAll('"', '')).join('\n')
   res.sentences = word.sentences.map(v => (v.c + '\n' + v.cn).replaceAll('"', '')).join('\n\n')
   res.phrases = word.phrases.map(v => (v.c + '\n' + v.cn).replaceAll('"', '')).join('\n\n')
@@ -348,6 +358,11 @@ function importData(e) {
                 relWords: v['同根词'] ?? '',
                 etymology: v['词源'] ?? '',
               })
+              // 笔记集中存储
+              const noteVal = (v['笔记'] ?? '').trim()
+              if (noteVal) {
+                base.noteData[v['单词']] = noteVal
+              }
             } catch (e) {
               console.error('导入单词报错' + v['单词'], e.message)
             }
@@ -425,6 +440,7 @@ async function exportData() {
       单词: t.word,
       '音标①': t.phonetic0,
       '音标②': t.phonetic1,
+      笔记: t.note,
       翻译: t.trans,
       例句: t.sentences,
       短语: t.phrases,
@@ -676,6 +692,14 @@ defineRender(() => {
                       onUpdate:modelValue={e => (wordForm.trans = e)}
                       placeholder="一行一个翻译，前面词性，后面内容（如n.取消）；多个翻译请换行"
                       autosize={{ minRows: 6, maxRows: 10 }}
+                    />
+                  </FormItem>
+                  <FormItem label="笔记">
+                    <Textarea
+                      modelValue={wordForm.note}
+                      onUpdate:modelValue={e => (wordForm.note = e)}
+                      placeholder="记录这个单词的个人笔记"
+                      autosize={{ minRows: 3, maxRows: 8 }}
                     />
                   </FormItem>
                   <FormItem label="例句">

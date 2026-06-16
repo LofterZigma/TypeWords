@@ -14,7 +14,8 @@ const common = {
 }
 const map = {
   DEV: {
-    API: 'http://localhost/',
+    // API: 'http://localhost/',
+    API: 'https://api.typewords.cc/',
     // RESOURCE_URL: 'https://dicts.2study.top/',
     // RESOURCE_URL: '/',
     RESOURCE_URL: 'https://files.typewords.cc/',

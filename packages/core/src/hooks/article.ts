@@ -1,12 +1,11 @@
 import type { Article, Sentence } from '../types'
 import { getDefaultArticleWord, getDefaultDict, PracticeArticleWordType } from '../types'
-import { _nextTick, cloneDeep } from '../utils'
-import { usePlayWordAudio } from './sound'
+import { _nextTick, cloneDeep, ensureCustomDictCopy } from '../utils'
+import { usePlayWordAudio, useTTsPlayAudio } from './sound'
 import { getSentenceAllText, getSentenceAllTranslateText } from './translate'
 import { useBaseStore } from '../stores/base'
 import { useRuntimeStore } from '../stores/runtime'
-import { nanoid } from 'nanoid'
-import { DictId } from '../config/env'
+import { useSettingStore } from '../stores/setting'
 
 function parseSentence(sentence: string) {
   // 先统一一些常见的“智能引号” -> 直引号，避免匹配问题
@@ -378,20 +377,68 @@ export function usePlaySentenceAudio() {
   }
 }
 
+export interface ArticleTextAudio {
+  text: string
+  start?: number
+  end?: number
+}
+
+function hasValidArticleTextAudioPosition(target: ArticleTextAudio) {
+  if (target.start === undefined || target.start === null) return false
+  let start = Number(target.start)
+  let end = Number(target.end)
+  return Number.isFinite(start) && (end === -1 || (Number.isFinite(end) && end > start))
+}
+
+export function usePlayArticleTextAudio() {
+  const settingStore = useSettingStore()
+  const ttsPlayAudio = useTTsPlayAudio()
+  let timer: ReturnType<typeof setTimeout> | undefined
+
+  function playArticleTextAudio(target: ArticleTextAudio, ref?: HTMLAudioElement) {
+    if (!target.text) return
+    clearTimeout(timer)
+
+    if (hasValidArticleTextAudioPosition(target) && ref?.src) {
+      if (typeof speechSynthesis !== 'undefined') speechSynthesis.cancel()
+      ref.pause()
+      let start = Number(target.start)
+      ref.volume = settingStore.articleSoundVolume / 100
+      ref.playbackRate = settingStore.articleSoundSpeed
+      ref.currentTime = start
+      ref.play()
+
+      let end = Number(target.end)
+      if (Number.isFinite(end) && end !== -1) {
+        timer = setTimeout(() => {
+          ref.pause()
+        }, ((end - start) / ref.playbackRate) * 1000)
+      }
+      return
+    }
+
+    if (ref?.src) ref.pause()
+    ttsPlayAudio(target.text, {
+      rate: settingStore.articleSoundSpeed,
+      volume: settingStore.articleSoundVolume / 100,
+    })
+  }
+
+  return {
+    playArticleTextAudio,
+  }
+}
+
 //todo 考虑与syncDictInMyStudyList、changeDict方法合并
 export function syncBookInMyStudyList(study = false) {
   _nextTick(() => {
     const base = useBaseStore()
     const runtimeStore = useRuntimeStore()
-    let temp = runtimeStore.editDict
-    let rIndex = base.article.bookList.findIndex(v => v.id === temp.id)
-    if (!temp.custom && temp.id !== DictId.articleCollect) {
-      temp.custom = true
-      if (!temp.id.includes('_custom')) {
-        temp.id += '_custom_' + nanoid(6)
-      }
-    }
+    const originalId = runtimeStore.editDict.id
+    let temp = ensureCustomDictCopy(runtimeStore.editDict)
+    let rIndex = base.article.bookList.findIndex(v => v.id === originalId)
     temp.length = temp.articles.length
+    runtimeStore.editDict = temp
     if (rIndex > -1) {
       base.article.bookList[rIndex] = getDefaultDict(temp)
       if (study) base.article.studyIndex = rIndex

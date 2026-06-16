@@ -8,3 +8,12 @@ export function copyOfficialDict(params?, data?) {
 export function deleteDict(params?, data?) {
   return http<Dict>('dict/delete', data, params, 'post')
 }
+
+
+export function parseImportFile(params?, data?) {
+  return http<Dict>('dict/parseImportFile', data, params, 'post')
+}
+
+export function quickImportWords(params?, data?) {
+  return http<Dict>('dict/quickImportWords', data, params, 'post')
+}

@@ -33,7 +33,8 @@ export interface SettingState {
   showNearWord: boolean // 显示上/下一个词
   ignoreCase: boolean // 忽略大小写
   allowWordTip: boolean // 默写时时否允许查看提示
-  waitTimeForChangeWord: number // 切下一个词的等待时间
+  waitTimeForChangeWord: number // 切下一个词的等待时间（自动模式）
+  spaceCooldownTime: number // 空格冷却时间（手动模式，单词完成后忽略空格键的时间）
   fontSize: {
     articleForeignFontSize: number
     articleTranslateFontSize: number
@@ -100,6 +101,7 @@ export const getDefaultSettingState = (): SettingState => ({
   ignoreCase: true,
   allowWordTip: true,
   waitTimeForChangeWord: 300,
+  spaceCooldownTime: 300,
   fontSize: {
     articleForeignFontSize: 48,
     articleTranslateFontSize: 20,

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { BaseButton, Toast } from '@typewords/base'
+import { BaseButton, Toast, VolumeIcon } from '@typewords/base'
 import { useWordOptions } from '../../hooks/dict'
 import { usePlayBeep, usePlayKeyboardAudio, usePlayWordAudio } from '../../hooks/sound'
 import QuestionForm from './QuestionForm.vue'
@@ -46,6 +46,13 @@ const emit = defineEmits<{
     val: {
       sentence: Sentence
       handle: boolean
+    },
+  ]
+  playArticleTextAudio: [
+    val: {
+      text: string
+      start?: number
+      end?: number
     },
   ]
   nextWord: [val: ArticleWord]
@@ -467,6 +474,19 @@ function play() {
   emit('play', { sentence: currentSection[sentenceIndex], handle: true })
 }
 
+function playArticleTitleAudio() {
+  emit('playArticleTextAudio', { text: props.article?.title ?? '' })
+}
+
+function playArticleQuestionAudio() {
+  if (!props.article?.question?.text) return
+  emit('playArticleTextAudio', {
+    text: props.article.question.text,
+    start: props.article.question.start,
+    end: props.article.question.end,
+  })
+}
+
 function del() {
   if (wrong) {
     wrong = ''
@@ -726,12 +746,18 @@ const currentPractice = inject('currentPractice', [])
     <header class="md:pt-10 pb-6">
       <div class="text-center">
         <span class="text-3xl">{{ store.sbook.lastLearnIndex + 1 }}. </span>
-        <span class="text-3xl">{{ props.article?.title ?? '' }}</span>
+        <span class="inline-flex items-center gap-1">
+          <span class="text-3xl">{{ props.article?.title ?? '' }}</span>
+          <VolumeIcon :simple="true" :title="$t('play')" :cb="playArticleTitleAudio" />
+        </span>
         <span class="ml-6 text-2xl" v-if="settingStore.translate">{{ props.article?.titleTranslate }}</span>
       </div>
 
       <div class="mt-2 text-2xl" v-if="props.article?.question?.text">
-        <div>Question: {{ props.article?.question?.text }}</div>
+        <div class="inline-flex items-center gap-1">
+          <span>Question: {{ props.article?.question?.text }}</span>
+          <VolumeIcon :simple="true" :title="$t('play')" :cb="playArticleQuestionAudio" />
+        </div>
         <div class="text-xl color-translate-second" v-if="settingStore.translate">
           问题: {{ props.article?.question?.translate }}
         </div>

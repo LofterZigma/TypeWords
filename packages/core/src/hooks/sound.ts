@@ -166,16 +166,25 @@ function getVoicesAsync() {
     }
   })
 }
+
+export interface TTsPlayOptions {
+  rate?: number
+  volume?: number
+  pitch?: number
+  lang?: string
+}
+
 export function useTTsPlayAudio() {
   const settingStore = useSettingStore()
 
-  function play(text: string) {
+  function play(text: string, options: TTsPlayOptions = {}) {
+    if (!text || typeof speechSynthesis === 'undefined') return
     speechSynthesis.cancel() // 防止 Chrome 队列卡死
     let msg = new SpeechSynthesisUtterance(text)
-    msg.rate = settingStore.wordSoundSpeed
-    msg.volume = settingStore.wordSoundVolume / 100
-    msg.pitch = 1
-    msg.lang = 'en-US'
+    msg.rate = options.rate ?? settingStore.wordSoundSpeed
+    msg.volume = options.volume ?? settingStore.wordSoundVolume / 100
+    msg.pitch = options.pitch ?? 1
+    msg.lang = options.lang ?? 'en-US'
     getVoicesAsync().then((voices: any[]) => {
       // 优先使用用户在当前浏览器配置的声色
       const browserKey = getBrowserKey()

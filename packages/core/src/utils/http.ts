@@ -4,12 +4,12 @@ import { AppEnv, ENV } from '../config/env.ts'
 import { Toast } from '@typewords/base'
 
 export const axiosInstance: AxiosInstance = axios.create({
-  // baseURL: ENV.API,
   timeout: 15000,
 })
 
 axiosInstance.interceptors.request.use(
   config => {
+    config.baseURL = ENV.API
     if (AppEnv.CAN_REQUEST) config.headers.token = AppEnv.TOKEN
     return config
   },
