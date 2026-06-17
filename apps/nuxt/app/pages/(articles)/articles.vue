@@ -35,7 +35,7 @@ useHead({
   title: APP_NAME + ' 文章',
 })
 
-const {nav} = useNav()
+const { nav } = useNav()
 const base = useBaseStore()
 const store = useBaseStore()
 const settingStore = useSettingStore()
@@ -51,7 +51,7 @@ watch(
       init()
     }
   },
-  {immediate: true}
+  { immediate: true }
 )
 
 async function onvisibilitychange() {
@@ -73,7 +73,7 @@ async function init() {
   document.addEventListener('visibilitychange', onvisibilitychange)
 
   if (AppEnv.CAN_REQUEST) {
-    let res = await myDictList({type: 'article'})
+    let res = await myDictList({ type: 'article' })
     if (res.success) {
       store.setState(Object.assign(store.$state, res.data))
     }
@@ -135,7 +135,7 @@ watch(
               text: `下一步（7/${TourConfig.total}）`,
               action() {
                 tour.next()
-                nav('/practice-articles/article_nce2', {guide: 1})
+                nav('/practice-articles/article_nce2', { guide: 1 })
               },
             },
           ],
@@ -148,7 +148,7 @@ watch(
       }, 500)
     }
   },
-  {immediate: true}
+  { immediate: true }
 )
 
 function startStudy() {
@@ -256,7 +256,7 @@ const weekList = $computed(() => {
   return list
 })
 
-const {data: recommendBookList, isFetching} = useFetch(resourceWrap(DICT_LIST.ARTICLE.RECOMMENDED)).json()
+const { data: recommendBookList, isFetching } = useFetch(resourceWrap(DICT_LIST.ARTICLE.RECOMMENDED)).json()
 
 let isOldHost = $ref(false)
 onMounted(() => {
@@ -266,10 +266,10 @@ onMounted(() => {
 
 <template>
   <BasePage>
-    <div class="my-30 text-2xl text-red" v-if="isOldHost">
+    <div class="my-100 text-4xl font-bold text-red" v-if="isOldHost">
       已启用新域名
       <a class="mr-4" :href="`${Origin}/words?from_old_site=1`">{{ Origin }}</a
-      >当前 2study.top 域名将在不久后停止使用
+      >当前 2study.top 域名将在 7 月 3 号停止使用
     </div>
 
     <div class="card flex flex-col md:flex-row justify-between gap-space p-4 md:p-6">
@@ -282,7 +282,7 @@ onMounted(() => {
           :show-progress="false"
           @click="goBookDetail(base.sbook)"
         />
-        <Book v-else :is-add="true" @click="router.push('/book-list')"/>
+        <Book v-else :is-add="true" @click="router.push('/book-list')" />
       </div>
       <div class="flex-1">
         <div class="flex justify-between items-start">
@@ -335,14 +335,18 @@ onMounted(() => {
           <BaseButton size="large" class="w-full md:w-auto" @click="startStudy" :disabled="!base.sbook.name">
             <div class="flex items-center gap-2 justify-center w-full">
               <span class="line-height-[2]">{{ isSaveData ? $t('continue_learning') : $t('start_learning') }}</span>
-              <IconFluentArrowCircleRight16Regular class="text-xl"/>
+              <IconFluentArrowCircleRight16Regular class="text-xl" />
             </div>
           </BaseButton>
         </div>
       </div>
     </div>
 
-    <ImportBanner title="导入自己的文章" desc="支持 json/xlsx 文件导入，或者手动输入文章导入" @click="nav('/import',{type:'article'})"  />
+    <ImportBanner
+      title="导入自己的文章"
+      desc="支持 json/xlsx 文件导入，或者手动输入文章导入"
+      @click="nav('/import', { type: 'article' })"
+    />
 
     <div class="card flex flex-col">
       <div class="flex justify-between">
@@ -350,7 +354,7 @@ onMounted(() => {
         <div class="flex gap-4 items-center">
           <PopConfirm title="确认删除所有选中书籍？" @confirm="handleBatchDel" v-if="selectIds.length">
             <BaseIcon class="del" :title="$t('delete')">
-              <DeleteIcon/>
+              <DeleteIcon />
             </BaseIcon>
           </PopConfirm>
 
@@ -383,7 +387,7 @@ onMounted(() => {
           v-for="(item, j) in base.article.bookList"
           @click="goBookDetail(item)"
         />
-        <Book :is-add="true" @click="router.push('/book-list')"/>
+        <Book :is-add="true" @click="router.push('/book-list')" />
       </div>
     </div>
 
