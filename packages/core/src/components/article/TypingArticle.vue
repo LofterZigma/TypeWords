@@ -5,13 +5,15 @@ import { usePlayBeep, usePlayKeyboardAudio, usePlayWordAudio } from '../../hooks
 import QuestionForm from './QuestionForm.vue'
 import Space from './Space.vue'
 import TypingWord from './TypingWord.vue'
+import WordLookupPopover from '../word/WordLookupPopover.vue'
+import { lookupWord } from '../../hooks/useWordLookup.ts'
 import { useBaseStore } from '../../stores/base'
 import { usePracticeStore } from '../../stores/practice'
 import { useRuntimeStore } from '../../stores/runtime'
 import { useSettingStore } from '../../stores/setting'
 import { getDefaultArticle, getDefaultWord } from '../../types'
 import type { Article, ArticleWord, Sentence, Word } from '../../types'
-import { _dateFormat, _nextTick, isMobile, msToHourMinute, total,debounce  } from '../../utils'
+import { _dateFormat, _nextTick, isMobile, msToHourMinute, total, debounce } from '../../utils'
 import { emitter, EventKey, useEvents } from '../../utils/eventBus'
 import ContextMenu from '@imengyu/vue3-context-menu'
 import '@imengyu/vue3-context-menu/lib/vue3-context-menu.css'
@@ -536,6 +538,10 @@ function del() {
   }
 }
 
+function onArticleWordClick(e: MouseEvent, wordText: string) {
+  lookupWord(e, wordText, playWordAudio)
+}
+
 function showSentence(i1: number = sectionIndex, i2: number = sentenceIndex, i3: number = wordIndex) {
   hoverIndex = { sectionIndex: i1, sentenceIndex: i2, wordIndex: i3 }
 }
@@ -804,7 +810,7 @@ const currentPractice = inject('currentPractice', [])
                     'hover-show',
                   word.type === PracticeArticleWordType.Number && 'font-family text-xl',
                 ]"
-                @click="playWordAudio(word.word)"
+                @click.stop="onArticleWordClick($event, word.word)"
               >
                 <TypingWord :word="word" :is-typing="true" v-if="isCurrent(indexI, indexJ, indexW) && !isSpace" />
                 <TypingWord :word="word" :is-typing="false" v-else />
@@ -878,6 +884,7 @@ const currentPractice = inject('currentPractice', [])
         <QuestionForm :questions="article?.questions" :duration="300" :immediateFeedback="false" :randomize="true" />
       </div>
     </template>
+    <WordLookupPopover />
   </div>
 </template>
 
@@ -927,6 +934,7 @@ $article-lh: 2.4;
     word-wrap: break-word;
     white-space: pre-wrap;
     font-family: var(--en-article-family);
+    //@apply bg-green!;
 
     .wrote,
     .hover-show {
@@ -941,8 +949,7 @@ $article-lh: 2.4;
 
     .hover-show {
       border-radius: 0.2rem;
-      //background: var(--color-select-bg);
-      @apply bg-green!;
+      @apply bg-green/70!;
 
       :deep(.hide) {
         opacity: 1 !important;
@@ -962,6 +969,7 @@ $article-lh: 2.4;
         .word-wrap {
           position: relative;
           transition: background-color 0.3s;
+          cursor: pointer;
         }
 
         .border-bottom {

@@ -1,6 +1,10 @@
 <script setup lang="ts">
 let logList = [
   {
+    date: '2026/06/18',
+    content: '新增点击查词功能',
+  },
+  {
     date: '2026/06/13',
     content: '优化导入单词、文章的流程和界面，更清晰明了',
   },
