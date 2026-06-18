@@ -18,6 +18,7 @@ import EditBook from '@typewords/core/components/article/EditBook.vue'
 import Book from '@typewords/core/components/Book.vue'
 import { MessageBox } from '@typewords/core/utils/MessageBox.tsx'
 import { useI18n } from 'vue-i18n'
+import type { FailedWordRow } from '~/components/import/WordFailedTable.vue'
 
 type ImportStep = 1 | 2 | 3
 type ImportType = 'word' | 'article'
@@ -26,6 +27,7 @@ type ImportResultSummary = {
   successCount: number
   skippedCount: number
   failedItems: string[]
+  pendingFailedWords?: FailedWordRow[]
   type: ImportType
 }
 
@@ -56,6 +58,10 @@ const targetLabel = computed(() => (isWord.value ? '词典' : '书籍'))
 const contentLabel = computed(() => (isWord.value ? '单词' : '文章'))
 const currentTarget = computed(() => selectedDict.value ?? pendingDict.value)
 const failedCount = computed(() => importSummary.value?.failedItems.length ?? 0)
+const pendingFailedCount = computed(() => importSummary.value?.pendingFailedWords?.length ?? 0)
+const hasPendingFailedWords = computed(() => isWord.value && pendingFailedCount.value > 0)
+const retryingFailed = ref(false)
+const importingBlank = ref(false)
 
 function importResultStorageKey(targetId: string) {
   return `${IMPORT_RESULT_STORAGE_PREFIX}${targetId}`
@@ -74,11 +80,24 @@ function loadImportSummary(targetId: string): ImportResultSummary | null {
     const raw = sessionStorage.getItem(importResultStorageKey(targetId))
     if (!raw) return null
     const summary = JSON.parse(raw) as Partial<ImportResultSummary>
+    const type = summary.type ?? importType.value
+    const pendingFailedWords = summary.pendingFailedWords?.map(row => ({
+      ...row,
+      editing: false,
+    })) ?? (type === 'word' && summary.failedItems?.length
+      ? summary.failedItems.map(word => ({
+          id: nanoid(6),
+          word,
+          checked: true,
+          editing: false,
+        }))
+      : undefined)
     return {
       successCount: summary.successCount ?? 0,
       skippedCount: summary.skippedCount ?? 0,
-      failedItems: summary.failedItems ?? [],
-      type: summary.type ?? importType.value,
+      failedItems: pendingFailedWords?.map(row => row.word) ?? summary.failedItems ?? [],
+      pendingFailedWords,
+      type,
     }
   } catch {
     return null
@@ -247,13 +266,55 @@ function goToDetail() {
   }
 }
 
+function createFailedWordRows(words: string[]): FailedWordRow[] {
+  return words.map(word => ({
+    id: nanoid(6),
+    word,
+    checked: true,
+    editing: false,
+  }))
+}
+
+function updateImportSummary(patch: Partial<ImportResultSummary>) {
+  if (!importSummary.value) return
+  const next = { ...importSummary.value, ...patch }
+  if (patch.pendingFailedWords !== undefined) {
+    next.failedItems = patch.pendingFailedWords.map(row => row.word)
+  }
+  importSummary.value = next
+  const targetId = String(runtimeStore.editDict.id || route.query.targetId || '')
+  if (targetId) saveImportSummary(targetId, next)
+}
+
+function onPendingFailedWordsUpdate(rows: FailedWordRow[]) {
+  updateImportSummary({ pendingFailedWords: rows })
+}
+
+function getCheckedFailedRows(): FailedWordRow[] {
+  return importSummary.value?.pendingFailedWords?.filter(row => row.checked) ?? []
+}
+
 function downloadFailedTxt() {
-  const items = importSummary.value?.failedItems ?? []
+  const items = hasPendingFailedWords.value
+    ? (importSummary.value?.pendingFailedWords ?? []).map(row => row.word)
+    : (importSummary.value?.failedItems ?? [])
   if (!items.length) return
   const content = items.join('\n')
   const blob = new Blob([content], { type: 'text/plain;charset=utf-8' })
   const name = runtimeStore.editDict.name || currentTarget.value?.name || '导入'
   saveAs(blob, `导入失败-${name}.txt`)
+}
+
+function goBackToStep2() {
+  step.value = 2
+  router.replace({
+    query: {
+      ...route.query,
+      type: importType.value,
+      step: '2',
+      targetId: String(runtimeStore.editDict.id || route.query.targetId || '') || undefined,
+    },
+  })
 }
 
 async function downloadWordTemplate(filename: string) {
@@ -447,7 +508,6 @@ async function parseArticleFile(file: File): Promise<ArticleParseResult> {
     const workbook = XLSX.read(data, { type: 'binary' })
     const sheetName = workbook.SheetNames[0]
     const rows: Record<string, unknown>[] = XLSX.utils.sheet_to_json(workbook.Sheets[sheetName])
-    debugger
     return collectArticleRows(rows, 'xlsx')
   }
 
@@ -516,6 +576,30 @@ function finishArticleImport(
   })
 }
 
+function applyFoundWords(target: Dict, foundItems: any[]) {
+  const next = cloneDeep(target)
+  const existsSet = new Set(next.words.map(w => w.word))
+  foundItems.forEach(item => {
+    if (!item?.word || existsSet.has(item.word)) return
+    next.words.push(getDefaultWord({ ...item, id: item.id ?? nanoid(6), custom: !item.trans?.length }))
+    existsSet.add(item.word)
+  })
+  next.length = next.words.length
+  return next
+}
+
+function splitWordListResult(list: any[], missing: string[], requestWords: string[]) {
+  const missingSet = new Set(missing)
+  const foundItems: any[] = []
+  requestWords.forEach((word, index) => {
+    const item = list[index]
+    if (item && !missingSet.has(word)) {
+      foundItems.push(item)
+    }
+  })
+  return { foundItems, missingSet }
+}
+
 async function mergeWordsFromList(
   target: Dict,
   newWords: string[]
@@ -532,29 +616,161 @@ async function mergeWordsFromList(
     return null
   }
 
-  const res = await getWordList(
-    null,
-    filtered.map(v => v.trim())
-  )
+  const requestWords = filtered.map(v => v.trim())
+  const res = await getWordList(null, requestWords)
   if (!res.success) {
     throw new Error(res.msg || '导入失败')
   }
 
   const { list = [], missing = [] } = (res.data ?? {}) as { list: any[]; missing: string[] }
-  const next = cloneDeep(target)
-  list.forEach(item => {
-    next.words.push(getDefaultWord({ ...item, id: item.id ?? nanoid(6), custom: !item.trans?.length }))
-  })
-  next.length = next.words.length
+  const { foundItems } = splitWordListResult(list, missing, requestWords)
+  const next = applyFoundWords(target, foundItems)
+  const pendingFailedWords = createFailedWordRows(missing)
 
-  const successCount = filtered.length - missing.length
   const summary: ImportResultSummary = {
-    successCount,
+    successCount: foundItems.length,
     skippedCount,
     failedItems: missing,
+    pendingFailedWords,
     type: 'word',
   }
   return { next, summary }
+}
+
+async function retryFailedImport() {
+  const rows = getCheckedFailedRows()
+  if (!rows.length) return Toast.warning('请先勾选要导入的单词')
+
+  retryingFailed.value = true
+  try {
+    const requestWords = rows.map(row => row.word.trim()).filter(Boolean)
+    const res = await getWordList(null, requestWords)
+    if (!res.success) throw new Error(res.msg || '查询失败')
+
+    const { list = [], missing = [] } = (res.data ?? {}) as { list: any[]; missing: string[] }
+    const { missingSet } = splitWordListResult(list, missing, requestWords)
+    const foundByWord = new Map<string, any>()
+    requestWords.forEach((word, index) => {
+      const item = list[index]
+      if (item && !missingSet.has(word)) {
+        foundByWord.set(word, item)
+      }
+    })
+
+    const dict = cloneDeep(runtimeStore.editDict)
+    const existsSet = new Set(dict.words.map(w => w.word))
+    const succeededRowIds = new Set<string>()
+    let added = 0
+
+    rows.forEach(row => {
+      const word = row.word.trim()
+      const item = foundByWord.get(word)
+      if (!item) return
+      if (existsSet.has(item.word)) {
+        succeededRowIds.add(row.id)
+        return
+      }
+      dict.words.push(getDefaultWord({ ...item, id: item.id ?? nanoid(6), custom: !item.trans?.length }))
+      existsSet.add(item.word)
+      succeededRowIds.add(row.id)
+      added++
+    })
+
+    if (added) {
+      dict.length = dict.words.length
+      upsertTarget(dict)
+    }
+
+    const checkedIds = new Set(rows.map(row => row.id))
+    const pending = (importSummary.value?.pendingFailedWords ?? []).filter(row => {
+      if (!checkedIds.has(row.id)) return true
+      return !succeededRowIds.has(row.id)
+    })
+
+    updateImportSummary({
+      successCount: (importSummary.value?.successCount ?? 0) + added,
+      pendingFailedWords: pending,
+    })
+
+    if (added) Toast.success(`成功导入 ${added} 个单词`)
+    if (rows.some(row => checkedIds.has(row.id) && !succeededRowIds.has(row.id))) {
+      Toast.warning('部分单词仍未收录，可修改拼写后重试')
+    }
+  } catch (error: any) {
+    Toast.error(error?.message || '再次导入失败')
+  } finally {
+    retryingFailed.value = false
+  }
+}
+
+function abandonFailedImport() {
+  MessageBox.confirm(
+    '放弃后这些单词不会加入词典，确定放弃吗？',
+    '放弃导入',
+    () => void 0,
+    () => void 0,
+    null,
+    {
+      t,
+      onConfirm: () => {
+        updateImportSummary({ pendingFailedWords: [], failedItems: [] })
+      },
+    }
+  )
+}
+
+async function importBlankFailedWords() {
+  const rows = getCheckedFailedRows()
+  if (!rows.length) return Toast.warning('请先勾选要导入的单词')
+
+  importingBlank.value = true
+  try {
+    const dict = cloneDeep(runtimeStore.editDict)
+    const existsSet = new Set(dict.words.map(w => w.word))
+    const importedIds = new Set<string>()
+    let added = 0
+    let duplicateCount = 0
+
+    rows.forEach(row => {
+      const word = row.word.trim()
+      if (!word) return
+      if (existsSet.has(word)) {
+        duplicateCount++
+        return
+      }
+      dict.words.push(getDefaultWord({ word, custom: true, id: nanoid(6) }))
+      existsSet.add(word)
+      importedIds.add(row.id)
+      added++
+    })
+
+    if (duplicateCount && !added) {
+      return Toast.warning('勾选的单词均已存在于词典中')
+    }
+
+    if (!added) return Toast.warning('没有可导入的单词')
+
+    dict.length = dict.words.length
+    upsertTarget(dict)
+
+    const checkedIds = new Set(rows.map(row => row.id))
+    const pending = (importSummary.value?.pendingFailedWords ?? []).filter(row => {
+      if (!checkedIds.has(row.id)) return true
+      return !importedIds.has(row.id)
+    })
+
+    updateImportSummary({
+      successCount: (importSummary.value?.successCount ?? 0) + added,
+      pendingFailedWords: pending,
+    })
+
+    if (duplicateCount) {
+      Toast.warning(`${duplicateCount} 个单词已存在，已跳过`)
+    }
+    Toast.success(`已导入 ${added} 个空白单词`)
+  } finally {
+    importingBlank.value = false
+  }
 }
 
 async function importManualWords() {
@@ -854,21 +1070,27 @@ async function goManualArticleEditWithoutConfirm() {
               <span>导入完成</span>
             </div>
             <div class="ml-10">
-              <li>成功 {{ importSummary.successCount }} {{ isWord ? '个' : '篇' }}</li>
+              <li>成功 {{ importSummary.successCount }} {{ isWord ? '个' : '篇' }}（已导入到{{ targetLabel }}中）</li>
               <li v-if="importSummary.skippedCount">跳过 {{ importSummary.skippedCount }} {{ isWord ? '个' : '篇' }}（{{
                 targetLabel
               }}中已存在）</li>
-              <li v-if="failedCount">
-                {{ failedCount }} 个失败（原因：{{
-                  isWord
-                    ? '未收录。单词会被添加到词典中，但没有其他信息，如释义、例句等'
-                    : '缺少 title 或 text 必填字段'
-                }}）
+              <li v-if="hasPendingFailedWords">
+                {{ pendingFailedCount }} 个未收录（尚未导入，可在下方表格处理）
+              </li>
+              <li v-else-if="failedCount && !isWord">
+                {{ failedCount }} 个失败（原因：缺少 title 或 text 必填字段）
               </li>
             </div>
           </div>
 
-          <div v-if="failedCount" class="result-panel">
+          <div v-if="hasPendingFailedWords" class="result-panel">
+            <WordFailedTable
+              :rows="importSummary.pendingFailedWords!"
+              @update:rows="onPendingFailedWordsUpdate"
+            />
+          </div>
+
+          <div v-else-if="failedCount && !isWord" class="result-panel">
             <div class="section-title text-base">失败项</div>
             <ul class="result-list">
               <li v-for="(item, index) in importSummary.failedItems" :key="`${item}-${index}`">
@@ -878,12 +1100,29 @@ async function goManualArticleEditWithoutConfirm() {
           </div>
 
           <div class="actions-row step2-actions">
-            <BaseButton type="info" size="large" @click="step = 2">返回上一步</BaseButton>
-            <div>
-              <BaseButton type="info" size="large" v-if="failedCount" @click="downloadFailedTxt">
-                下载失败列表
-              </BaseButton>
-              <BaseButton type="primary" size="large" @click="goToDetail"> 查看详情 </BaseButton>
+            <BaseButton type="info" size="large" @click="goBackToStep2">返回上一步</BaseButton>
+            <div class="flex flex-wrap justify-end">
+              <template v-if="hasPendingFailedWords">
+                <BaseButton type="info" size="large" @click="downloadFailedTxt">下载失败列表</BaseButton>
+                <BaseButton type="info" size="large" :loading="retryingFailed" @click="retryFailedImport">
+                  再次导入
+                </BaseButton>
+                <BaseButton type="info" size="large" @click="abandonFailedImport">放弃导入</BaseButton>
+                <BaseButton type="primary" size="large" :loading="importingBlank" @click="importBlankFailedWords">
+                  直接导入空白单词
+                </BaseButton>
+              </template>
+              <template v-else>
+                <BaseButton
+                  v-if="!isWord && failedCount"
+                  type="info"
+                  size="large"
+                  @click="downloadFailedTxt"
+                >
+                  下载失败列表
+                </BaseButton>
+                <BaseButton type="primary" size="large" @click="goToDetail">查看详情</BaseButton>
+              </template>
             </div>
           </div>
         </section>
