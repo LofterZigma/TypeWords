@@ -5,6 +5,7 @@ import { usePlayBeep, usePlayKeyboardAudio, usePlayWordAudio } from '../../hooks
 import QuestionForm from './QuestionForm.vue'
 import Space from './Space.vue'
 import TypingWord from './TypingWord.vue'
+import ClickableEnglishText from '../word/ClickableEnglishText.vue'
 import WordLookupPopover from '../word/WordLookupPopover.vue'
 import { lookupWord } from '../../hooks/useWordLookup.ts'
 import { useBaseStore } from '../../stores/base'
@@ -489,6 +490,15 @@ function playArticleQuestionAudio() {
   })
 }
 
+function playArticleQuoteAudio() {
+  if (!props.article?.quote?.text) return
+  emit('playArticleTextAudio', {
+    text: props.article.quote.text,
+    start: props.article.quote.start,
+    end: props.article.quote.end,
+  })
+}
+
 function del() {
   if (wrong) {
     wrong = ''
@@ -753,15 +763,27 @@ const currentPractice = inject('currentPractice', [])
       <div class="text-center">
         <span class="text-3xl">{{ store.sbook.lastLearnIndex + 1 }}. </span>
         <span class="inline-flex items-center gap-1">
-          <span class="text-3xl">{{ props.article?.title ?? '' }}</span>
+          <ClickableEnglishText
+            class="text-3xl"
+            :text="props.article?.title ?? ''"
+            word=""
+            :dictation="false"
+            :high-light="false"
+          />
           <VolumeIcon :simple="true" :title="$t('play')" :cb="playArticleTitleAudio" />
         </span>
         <span class="ml-6 text-2xl" v-if="settingStore.translate">{{ props.article?.titleTranslate }}</span>
       </div>
 
       <div class="mt-2 text-2xl" v-if="props.article?.question?.text">
-        <div class="inline-flex items-center gap-1">
-          <span>Question: {{ props.article?.question?.text }}</span>
+        <div class="inline-flex items-center gap-1 flex-wrap">
+          <span>Question:</span>
+          <ClickableEnglishText
+            :text="props.article?.question?.text"
+            word=""
+            :dictation="false"
+            :high-light="false"
+          />
           <VolumeIcon :simple="true" :title="$t('play')" :cb="playArticleQuestionAudio" />
         </div>
         <div class="text-xl color-translate-second" v-if="settingStore.translate">
@@ -828,6 +850,21 @@ const currentPractice = inject('currentPractice', [])
               {{ sentence.translate }}
             </span>
           </span>
+        </div>
+        <div class="text-right italic mt-4" v-if="props.article?.quote?.text">
+          <div class="inline-flex items-center gap-1 justify-end flex-wrap">
+            <ClickableEnglishText
+              class="text-2xl"
+              :text="props.article.quote.text"
+              word=""
+              :dictation="false"
+              :high-light="false"
+            />
+            <VolumeIcon :simple="true" :title="$t('play')" :cb="playArticleQuoteAudio" />
+          </div>
+          <div class="text-xl color-translate-second mt-1" v-if="settingStore.translate && props.article.quote.translate">
+            {{ props.article.quote.translate }}
+          </div>
         </div>
       </article>
       <div class="translate" v-show="settingStore.translate">
