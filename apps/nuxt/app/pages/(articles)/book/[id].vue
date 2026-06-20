@@ -30,6 +30,9 @@ import { DictType } from '@typewords/core/types/enum.ts'
 import { usePracticeWordPersistence } from '@typewords/core/composables/usePracticePersistence.ts'
 import { getPracticeArticleCacheLocal } from '@typewords/core/utils/cache.ts'
 import { usePlayArticleTextAudio } from '@typewords/core/hooks/article.ts'
+import ClickableEnglishText from '@typewords/core/components/word/ClickableEnglishText.vue'
+import ClickableWord from '@typewords/core/components/word/ClickableWord.vue'
+import WordLookupPopover from '@typewords/core/components/word/WordLookupPopover.vue'
 
 const { t } = useI18n()
 
@@ -252,6 +255,18 @@ function playArticleQuestionAudio() {
   )
 }
 
+function playArticleQuoteAudio() {
+  if (!selectArticle?.quote?.text) return
+  playArticleTextAudio(
+    {
+      text: selectArticle.quote.text,
+      start: selectArticle.quote.start,
+      end: selectArticle.quote.end,
+    },
+    audioRef
+  )
+}
+
 // 计算段落数量
 const paragraphCount = $computed(() => {
   if (!selectArticle.text) return 0
@@ -364,7 +379,13 @@ watch(
                     <div class="flex justify-between items-center relative">
                       <span>
                         <span class="inline-flex items-center gap-1">
-                          <span class="text-3xl">{{ selectArticle.title }}</span>
+                          <ClickableEnglishText
+                            class="text-3xl"
+                            :text="selectArticle.title"
+                            word=""
+                            :dictation="false"
+                            :high-light="false"
+                          />
                           <VolumeIcon :simple="true" :title="$t('play')" :cb="playArticleTitleAudio" />
                         </span>
                         <span class="ml-6 text-2xl" v-if="showTranslate">{{ selectArticle.titleTranslate }}</span>
@@ -397,8 +418,14 @@ watch(
                     </div>
 
                     <div class="mt-2 text-2xl" v-if="selectArticle?.question?.text">
-                      <div class="inline-flex items-center gap-1">
-                        <span>Question: {{ selectArticle?.question?.text }}</span>
+                      <div class="inline-flex items-center gap-1 flex-wrap">
+                        <span>Question:</span>
+                        <ClickableEnglishText
+                          :text="selectArticle?.question?.text"
+                          word=""
+                          :dictation="false"
+                          :high-light="false"
+                        />
                         <VolumeIcon :simple="true" :title="$t('play')" :cb="playArticleQuestionAudio" />
                       </div>
                       <div
@@ -427,7 +454,8 @@ watch(
                               v-for="(s, n) in w.split(' ').filter(Boolean)"
                               :class="`inline-block word-${i}-${j}-${n}`"
                               :key="`${i}-${j}-${n}`"
-                              ><span>{{ s }}</span>
+                            >
+                              <ClickableWord :word="s" />
                               <span class="space"></span>
                             </span>
                           </span>
@@ -444,7 +472,16 @@ watch(
                         </div>
                       </template>
                       <div class="text-right italic">
-                        <div class="text-2xl" v-if="selectArticle?.quote?.text">{{ selectArticle?.quote?.text }}</div>
+                        <div class="inline-flex items-center gap-1 justify-end flex-wrap" v-if="selectArticle?.quote?.text">
+                          <ClickableEnglishText
+                            class="text-2xl"
+                            :text="selectArticle.quote.text"
+                            word=""
+                            :dictation="false"
+                            :high-light="false"
+                          />
+                          <VolumeIcon :simple="true" :title="$t('play')" :cb="playArticleQuoteAudio" />
+                        </div>
                         <div
                           class="trans-row text-xl color-translate-second"
                           v-if="
@@ -538,6 +575,7 @@ watch(
       </div>
     </div>
   </div>
+  <WordLookupPopover />
 </template>
 
 <style scoped lang="scss">

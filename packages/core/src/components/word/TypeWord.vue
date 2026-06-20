@@ -13,6 +13,9 @@ import {
 import { emitter, EventKey, useEventsByWatch } from '../../utils/eventBus'
 import { onMounted, onUnmounted, watch } from 'vue'
 import SentenceHightLightWord from './SentenceHightLightWord.vue'
+import ClickableEnglishText from './ClickableEnglishText.vue'
+import ClickableWord from './ClickableWord.vue'
+import WordLookupPopover from './WordLookupPopover.vue'
 import { _nextTick, last, normalizeWord, useNav } from '../../utils'
 import { BaseButton, BaseIcon, Textarea, Toast, ToastComponent, Tooltip, VolumeIcon } from '@typewords/base'
 import Space from '../article/Space.vue'
@@ -937,7 +940,7 @@ const isCollect = $computed(() => isWordCollect(props.word))
           >
             <div class="flex gap-space text-xl">
               <div v-if="index !== currentPracticeSentenceIndex">
-                <SentenceHightLightWord
+                <ClickableEnglishText
                   :text="item.c"
                   :word="word.word"
                   :dictation="!(!settingStore.dictation || showFullWord || showWordResult)"
@@ -968,7 +971,7 @@ const isCollect = $computed(() => isWordCollect(props.word))
           <div class="label">{{ $t('phrases') }}</div>
           <div class="flex flex-col">
             <div class="flex items-center gap-4" v-for="item in word.phrases">
-              <SentenceHightLightWord
+              <ClickableEnglishText
                 class="en"
                 :text="item.c"
                 :word="word.word"
@@ -995,9 +998,10 @@ const isCollect = $computed(() => isWordCollect(props.word))
                     {{ item.cn }}
                   </div>
                   <div class="anim" v-opacity="!settingStore.dictation || showFullWord || showWordResult">
-                    <span class="en" v-for="(i, j) in item.ws">
-                      {{ i }} {{ j !== item.ws.length - 1 ? ' / ' : '' }}
-                    </span>
+                    <template v-for="(i, j) in item.ws" :key="j">
+                      <ClickableWord :word="i" />
+                      <span v-if="j !== item.ws.length - 1"> / </span>
+                    </template>
                   </div>
                 </div>
               </div>
@@ -1008,9 +1012,12 @@ const isCollect = $computed(() => isWordCollect(props.word))
 
       <div
         class="anim"
-        v-opacity="(settingStore.translate && !settingStore.dictation) || showFullWord || showWordResult"
+        v-opacity="
+          ((settingStore.translate && !settingStore.dictation) || showFullWord || showWordResult) &&
+          settingStore.showEtymologyAndRelWords
+        "
       >
-        <template v-if="word?.etymology?.length && false">
+        <template v-if="word?.etymology?.length">
           <div class="line-white my-3"></div>
           <div class="flex">
             <div class="label">{{ $t('etymology') }}</div>
@@ -1024,18 +1031,18 @@ const isCollect = $computed(() => isWordCollect(props.word))
           <!--        <div class="line-white my-2"></div>-->
         </template>
 
-        <template v-if="word?.relWords?.root && false">
+        <template v-if="word?.relWords?.root">
           <div class="flex">
             <div class="label">{{ $t('related_words') }}</div>
             <div class="flex flex-col gap-3">
               <div v-if="word.relWords.root" class=" ">
-                {{ $t('word_root') }}：<span class="en">{{ word.relWords.root }}</span>
+                {{ $t('word_root') }}：<ClickableWord class="en" :word="word.relWords.root" />
               </div>
               <div class="flex" v-for="item in word.relWords.rels">
                 <div class="pos">{{ item.pos }}</div>
                 <div>
                   <div class="flex items-center gap-4" v-for="itemj in item.words">
-                    <div class="en">{{ itemj.c }}</div>
+                    <ClickableWord class="en" :word="itemj.c" />
                     <div class="cn">{{ itemj.cn }}</div>
                   </div>
                 </div>
@@ -1054,6 +1061,7 @@ const isCollect = $computed(() => isWordCollect(props.word))
         height: isTypingSentence() ? '20px' : settingStore.fontSize.wordForeignFontSize + 'px',
       }"
     ></div>
+    <WordLookupPopover />
   </div>
 </template>
 
@@ -1130,6 +1138,10 @@ const isCollect = $computed(() => isWordCollect(props.word))
 
   .en {
     @apply text-lg;
+  }
+
+  .pos{
+    @apply min-w-10;
   }
 }
 

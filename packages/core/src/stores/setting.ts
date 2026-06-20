@@ -70,6 +70,7 @@ export interface SettingState {
   identifyMethod: IdentifyMethod
   _ignoreWatch: boolean //忽略监听，避免重复保存和上传
   ttsVoiceMap: { key: string; voice: string }[] // 浏览器 TTS 声色映射，key 为 OS+浏览器组合（如 mac+chrome）
+  showEtymologyAndRelWords:boolean // 显示词源和相关词
 }
 
 export const getDefaultSettingState = (): SettingState => ({
@@ -127,7 +128,6 @@ export const getDefaultSettingState = (): SettingState => ({
   mobileNavCollapsed: false,
   ignoreSymbol: true,
   practiceSentence: false,
-
   fsrsEasyLimit: 0,
   fsrsGoodLimit: 3,
   fsrsHardLimit: 6,
@@ -148,6 +148,7 @@ export const getDefaultSettingState = (): SettingState => ({
   identifyMethod: IdentifyMethod.SelfAssessment,
   _ignoreWatch: false,
   ttsVoiceMap: [],
+  showEtymologyAndRelWords: false,
 })
 
 export const useSettingStore = defineStore('setting', {

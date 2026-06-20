@@ -92,7 +92,9 @@ export function useEventListener(type: string, listener: EventListenerOrEventLis
   let cleanup: (() => void) | null = null
 
   const add = () => {
-    const emitKeys = new Set()
+    //chrome上，win的事件先触发，safari上input的事件先触发
+    const emitWindowsKeys = new Set()
+    const emitInputKeys = new Set()
     const cleanupFns: Array<() => void> = []
     const registerCleanup = (fn: () => void) => cleanupFns.push(fn)
 
@@ -195,23 +197,19 @@ export function useEventListener(type: string, listener: EventListenerOrEventLis
         if (isComposing) return
         const target = event.target as HTMLInputElement | null
         if (!target) return
-        const value = target?.value ?? ''
-        let char = value.slice(-1) || (event as any).data?.slice(-1)
+        let char = ''
+        let keyCode = -1
         if (event.inputType === 'deleteContentBackward') {
           char = 'Backspace'
-          if (emitKeys.has(char)) return
-          dispatchSyntheticKey({ key: char, code: charToCode(char), keyCode: 8 })
-          target.value = ' '
-          return
+          keyCode = 8
+        }else {
+          char = target?.value?.slice(-1) || (event as any).data?.slice(-1)
+          keyCode = char === ' ' ? 32 : char.toUpperCase().charCodeAt(0)
         }
-
-        if (!char) {
-          target.value = ' '
-          return
-        }
-        if (emitKeys.has(char)) return
-        // console.log('handleInput', Date.now())
-        const keyCode = char === ' ' ? 32 : char.toUpperCase().charCodeAt(0)
+        if (emitWindowsKeys.has(char)) return
+        // console.log('handleInput', Date.now(), emitWindowsKeys)
+        emitInputKeys.add(char)
+        setTimeout(() => emitInputKeys.delete(char), 30)
         dispatchSyntheticKey({ key: char, code: charToCode(char), keyCode })
         target.value = ' '
       }
@@ -230,12 +228,11 @@ export function useEventListener(type: string, listener: EventListenerOrEventLis
 
       const windowListener = (e: KeyboardEvent) => {
         // if (e.code in CODE_TO_CHAR && !e.ctrlKey && !e.metaKey) return
-        // console.log('windowListener', Date.now())
-        emitKeys.add(e.key)
+        if (emitInputKeys.has(e.key)) return
+        // console.log('windowListener', Date.now(), emitInputKeys)
         invokeListener(e)
-        setTimeout(() => {
-          emitKeys.delete(e.key)
-        }, 20)
+        emitWindowsKeys.add(e.key)
+        setTimeout(() => emitWindowsKeys.delete(e.key), 30)
       }
 
       hiddenInput.addEventListener('compositionstart', handleCompositionStart)

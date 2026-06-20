@@ -47,6 +47,10 @@ const settingStore = useSettingStore()
       </RadioGroup>
     </SettingItem>
 
+    <SettingItem title="显示词源和相关词" desc="单词的词源和相关词可能有误，请谨慎使用">
+      <Switch v-model="settingStore.showEtymologyAndRelWords" />
+    </SettingItem>
+
     <!--          自动切换-->
     <div class="line"></div>
     <SettingItem :mainTitle="$t('auto_switch')" />
